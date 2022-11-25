@@ -7,9 +7,16 @@ use std::io::{prelude::*, BufReader};
 use std::ops;
 
 #[derive(Clone, Debug)]
+enum BoardState {
+    Active,
+    WonAt(usize, usize),
+}
+
+#[derive(Clone, Debug)]
 struct Board {
     data: Vec<usize>,
     width: usize,
+    state: BoardState,
 }
 
 impl Board {
@@ -17,6 +24,7 @@ impl Board {
         Board {
             data: Vec::new(),
             width: 5,
+            state: BoardState::Active,
         }
     }
 
@@ -55,13 +63,17 @@ impl Board {
 
 impl Display for Board {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        //write!(f, "----\n")?;
+        write!(f, "-- {:?} -- \n", self.state)?;
         for (i, v) in self.data.iter().enumerate() {
             write!(f, "{v:>3}")?;
             if (i + 1) % self.width == 0 {
                 write!(f, "\n")?;
             }
         }
+        match self.state {
+            BoardState::WonAt(num, sum) => write!(f, "{} * {} = {}", num, sum, num * sum),
+            _ => Ok(()),
+        }?;
         Ok(())
     }
 }
@@ -76,6 +88,12 @@ fn parse_board_line(line: &str) -> Vec<usize> {
 
 #[derive(Clone)]
 struct Boards(Vec<Board>);
+
+impl Boards {
+    fn new() -> Self {
+        Boards { 0: Vec::new() }
+    }
+}
 
 impl ops::Deref for Boards {
     type Target = Vec<Board>;
@@ -114,7 +132,7 @@ fn main() -> Result<()> {
     let draws: Vec<usize> = draws.split(',').map(|e| e.parse().unwrap()).collect();
     //dbg!(draws);
 
-    let mut boards = Boards { 0: Vec::new() };
+    let mut boards = Boards::new();
     lines.next();
 
     let mut staging_board = Board::new();
@@ -134,21 +152,30 @@ fn main() -> Result<()> {
     //print!("{boards}");
     dbg! {boards.len()};
 
+    // find the first winning boards in order
+    let mut winning_boards = Boards::new();
     let mut drawn = [false; 100];
-    'outer: for num in draws {
+    for num in draws {
         drawn[num] = true;
         //println!("{}: {:?}", num, &drawn[..10]);
         print!("{},", num);
-        for board in boards.iter() {
+        for board in &mut boards.iter_mut() {
             if board.win(&drawn) {
-                println!("\n{board}\n wins!");
                 let sum = board.unmarked_sum(&drawn);
-                println!("{} * {} = {}", sum, num, sum * num);
-                break 'outer;
+                board.state = BoardState::WonAt(num, sum);
+                winning_boards.push(board.clone());
             }
         }
+        boards.retain(|e| matches!(e.state, BoardState::Active));
     }
     println!("");
+
+    dbg!(winning_boards.len());
+    let first = &winning_boards[0];
+    println!("first win: \n{}", first);
+
+    let last = &winning_boards[winning_boards.len() - 1];
+    println!("last win: \n{}", last);
 
     Ok(())
 }
