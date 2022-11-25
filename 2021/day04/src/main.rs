@@ -57,21 +57,21 @@ impl Board {
         }
 
         // no win condition found
-        return false;
+        false
     }
 }
 
 impl Display for Board {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "-- {:?} -- \n", self.state)?;
+        writeln!(f, "-- {:?} --", self.state)?;
         for (i, v) in self.data.iter().enumerate() {
             write!(f, "{v:>3}")?;
             if (i + 1) % self.width == 0 {
-                write!(f, "\n")?;
+                writeln!(f,)?;
             }
         }
         match self.state {
-            BoardState::WonAt(num, sum) => write!(f, "{} * {} = {}", num, sum, num * sum),
+            BoardState::WonAt(num, sum) => writeln!(f, "-- {} * {} = {}", num, sum, num * sum),
             _ => Ok(()),
         }?;
         Ok(())
@@ -91,7 +91,7 @@ struct Boards(Vec<Board>);
 
 impl Boards {
     fn new() -> Self {
-        Boards { 0: Vec::new() }
+        Boards(Vec::new())
     }
 }
 
@@ -111,11 +111,11 @@ impl ops::DerefMut for Boards {
 
 impl Display for Boards {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        write!(f, "Boards(\n")?;
+        writeln!(f, "Boards(")?;
         for b in self.iter() {
-            write!(f, "{}\n", b)?;
+            writeln!(f, "{}", b)?;
         }
-        write!(f, ")\n")?;
+        writeln!(f, ")")?;
         Ok(())
     }
 }
@@ -139,7 +139,7 @@ fn main() -> Result<()> {
     for line in lines {
         //println!(" {line:?}");
         match line {
-            Ok(l) if l == "" => {
+            Ok(l) if l.is_empty() => {
                 boards.push(staging_board.clone());
                 staging_board.data.clear();
             }
@@ -168,7 +168,7 @@ fn main() -> Result<()> {
         }
         boards.retain(|e| matches!(e.state, BoardState::Active));
     }
-    println!("");
+    println!();
 
     dbg!(winning_boards.len());
     let first = &winning_boards[0];
