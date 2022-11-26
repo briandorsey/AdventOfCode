@@ -11,8 +11,8 @@ use tracing_subscriber::FmtSubscriber;
 
 #[derive(Debug, Eq, PartialEq, Hash)]
 struct Point {
-    x: usize,
-    y: usize,
+    x: i32,
+    y: i32,
 }
 
 #[derive(Debug)]
@@ -62,42 +62,52 @@ fn main() -> Result<()> {
     let mut coords = HashMap::<Point, usize>::new();
     for v in vecs {
         let Line(a, b) = v;
+        let min_y: i32;
+        let max_y: i32;
+        if a.y < b.y {
+            min_y = a.y;
+            max_y = b.y;
+        } else {
+            min_y = b.y;
+            max_y = a.y;
+        }
+        let min_x: i32;
+        let max_x: i32;
+        if a.x < b.x {
+            min_x = a.x;
+            max_x = b.x;
+        } else {
+            min_x = b.x;
+            max_x = a.x;
+        }
         if a.x == b.x {
             info!("X: {a:?}, {b:?}");
-            let min: usize;
-            let max: usize;
-            if a.y < b.y {
-                min = a.y;
-                max = b.y;
-            } else {
-                min = b.y;
-                max = a.y;
-            }
-
-            for i in min..=max {
+            for i in min_y..=max_y {
                 let point = Point { x: a.x, y: i };
                 debug!(" -> {point:?}");
                 coords.entry(point).and_modify(|c| *c += 1).or_insert(1);
             }
         } else if a.y == b.y {
             info!("Y: {a:?}, {b:?}");
-            let min: usize;
-            let max: usize;
-            if a.x < b.x {
-                min = a.x;
-                max = b.x;
-            } else {
-                min = b.x;
-                max = a.x;
-            }
-
-            for i in min..=max {
+            for i in min_x..=max_x {
                 let point = Point { x: i, y: a.y };
                 debug!(" -> {point:?}");
                 coords.entry(point).and_modify(|c| *c += 1).or_insert(1);
             }
         } else {
-            info!("skipping: {a:?}, {b:?}");
+            info!("diagonal: {a:?}, {b:?}");
+            assert_eq!(max_x - min_x, max_y - min_y);
+            let steps = max_x - min_x;
+            let x_direction = if a.x < b.x { 1 } else { -1 };
+            let y_direction = if a.y < b.y { 1 } else { -1 };
+            for i in 0..=steps {
+                let point = Point {
+                    x: a.x + i * x_direction,
+                    y: a.y + i * y_direction,
+                };
+                debug!(" -> {point:?}");
+                coords.entry(point).and_modify(|c| *c += 1).or_insert(1);
+            }
         }
     }
 
