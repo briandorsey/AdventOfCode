@@ -52,7 +52,7 @@ fn main() -> Result<()> {
     for i in min..=max {
         let mut fuel_consumption = 0i64;
         for (loc, count) in &locations {
-            let diff = (loc - i).abs();
+            let diff = sum_steps((loc - i).abs());
             debug!(
                 "({loc:>3}-{i:>3})*{count:>3}= ({:>3})*{count:>3} = {:>3}",
                 diff,
@@ -68,6 +68,10 @@ fn main() -> Result<()> {
     info!("minimum fuel usage: {min_fuel}");
 
     Ok(())
+}
+
+fn sum_steps(num: i64) -> i64 {
+    (1..=num).sum()
 }
 
 #[cfg(test)]
