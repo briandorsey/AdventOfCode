@@ -3,10 +3,8 @@ use std::fs::File;
 use std::io::{self, BufRead};
 
 fn main() -> anyhow::Result<()> {
-    println!("Hello, world!");
-
     let filepath = env::args().nth(1).expect("please pass a file path");
-    println!("{filepath}");
+    println!("parsing: {filepath}");
     let file = File::open(filepath)?;
     let buf = io::BufReader::new(file);
 
