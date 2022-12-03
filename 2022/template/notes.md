@@ -8,3 +8,6 @@
 # review and iterate
 * 
 
+# things to learn about
+* 
+
