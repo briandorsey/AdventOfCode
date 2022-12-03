@@ -15,6 +15,8 @@ impl Rucksack {
         //println!("{common:?}");
         *common[0] // TODO: fix
     }
+
+    //fn union(&self) -> HashSet<&char> { self.a.union(&self.b).collect::<HashSet<_>>() }
 }
 
 fn main() -> anyhow::Result<()> {
@@ -46,11 +48,33 @@ fn main() -> anyhow::Result<()> {
 
     //println!( "{:?}", rucks .iter() .map(|e| e.misfile()) .map(|e| priorities.get(&e).unwrap()) .collect::<Vec<&usize>>());
     println!(
-        "{:?}",
+        "part1: {:?}",
         rucks
             .iter()
             .map(|e| e.misfile())
             .map(|e| priorities.get(&e).unwrap())
+            .sum::<usize>()
+    );
+
+    // part 2
+    let contents: Vec<HashSet<char>> = input.lines().map(|e| e.chars().collect()).collect();
+    let mut badges: Vec<char> = Vec::new();
+    for chunk in &mut contents.chunks(3) {
+        //println!("{:?}", chunk);
+        let a: HashSet<&char> = chunk[0].intersection(&chunk[1]).collect();
+        let b: HashSet<&char> = chunk[1].intersection(&chunk[2]).collect();
+        let c: HashSet<&&char> = a.intersection(&b).collect();
+        //println!("a:{:?}", a);
+        //println!("b:{:?}", b);
+        //println!("c:{:?}", c);
+        badges.push(***c.iter().next().unwrap());
+    }
+
+    println!(
+        "part2: {:?}",
+        badges
+            .iter()
+            .map(|e| priorities.get(e).unwrap())
             .sum::<usize>()
     );
 
