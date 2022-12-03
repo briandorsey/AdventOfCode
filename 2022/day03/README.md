@@ -6,8 +6,18 @@
 * 
 
 # review and iterate
-* 
+* on the intersect question above: 
+    * @queer_emma@mastodon.lol has a [solution](https://github.com/queer-emma/aoc2022/blob/main/src/day3.rs) which is pretty much what I was trying to implement, but never got right. Looks like `.copied()` is what I was missing.
+    * []() dcreemer has a [solution](https://github.com/dcreemer/adventofcode/blob/main/2022/rust/three/src/main.rs) with a `.fold()` base implementation. 
+    * []() pudnax has a [solution](https://github.com/pudnax/advent-of-code-2022/blob/master/src/solutions/day3.rs#L29) using `.find()` and `.contains()`
+    * @JSMuellerRoemer@c.im has a [solution](https://github.com/l0calh05t/advent-of-code-2022/blob/trunk/src/solutions/day_03.rs) using ... some kind of binary math to manually compute the set. 
+    * @xfix@fosstodon.org has a [solution](https://github.com/xfix/advent-of-code-2022/blob/master/src/day3/mod.rs) using `.retain()` and `.contains()`
+    * @MichDdev@mastodon.social has a [solution](https://github.com/michd/advent-of-code/blob/main/2022/aoc03/src/main.rs) using a `.retain()` and `.any()`
+    * @gadiguibou@mastodon.online [points out that](https://mastodon.online/@gadiguibou/109450630889049793) "`std::HashSet` implements `&HashSet & &HashSet` with output HashSet as an intersection operator to solve exactly this." [docs link](https://doc.rust-lang.org/std/collections/struct.HashSet.html#impl-BitAnd%3C%26HashSet%3CT%2C%20S%3E%3E-for-%26HashSet%3CT%2C%20S%3E)
+* @beeb@hachyderm.io has a [solution](https://github.com/beeb/aoc-2022/blob/main/src/days/day03.rs) which includes multiple implementations with timing, interesting to compare!
 
 # things to learn about
-* 
+* `.copied()`
+* step through l0calh05t's solution to understand it
+* https://lib.rs/crates/im - via [fasterthanlime](https://fasterthanli.me/series/advent-of-code-2022/part-3)
 
