@@ -22,21 +22,18 @@ impl Round {
             Play::Paper => 2,
             Play::Scissors => 3,
         } + match (&self.expected, &self.response) {
-            (x, y) if x == y => 3,
             // lose
             (Play::Scissors, Play::Paper)
             | (Play::Rock, Play::Scissors)
             | (Play::Paper, Play::Rock) => 0,
+            // draw
+            (&Play::Rock, &Play::Rock)
+            | (&Play::Paper, &Play::Paper)
+            | (&Play::Scissors, &Play::Scissors) => 3,
             // win
             (Play::Scissors, Play::Rock)
             | (Play::Rock, Play::Paper)
             | (Play::Paper, Play::Scissors) => 6,
-            // honestly don't understand why the following are needed,
-            // won't compile without, but this branch doesn't get taken
-            // when items are equal (the first branch covers them)
-            (&Play::Rock, &Play::Rock)
-            | (&Play::Paper, &Play::Paper)
-            | (&Play::Scissors, &Play::Scissors) => unreachable!(),
         })
     }
 }

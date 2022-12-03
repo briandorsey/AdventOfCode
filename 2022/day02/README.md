@@ -4,6 +4,7 @@
 # confusion
 * I still don't really have a good mental model of Error handling in main()
 * looks like the compiler can get confused about match arms with guard conditions. Prevents simplifying some code or at least being sure all cases are dealt with. [unreachable!](https://doc.rust-lang.org/std/macro.unreachable.html)
+    * [Marcus Griep](@mvgrim@hachyderm.io) explains: The reason is that the match statement doesn't know _which_ `x` and `y` will report as equal. You may have written a custom `PartialEq` that declares no values are ever equal. So, the `match` statement can't eliminate those options as matched.  You could instead remove the match arm with the `if x == y` and just replace `unreachable!()` with `3`.
 
 # TIL
 * match is lovely
