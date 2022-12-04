@@ -17,6 +17,7 @@
     * @kellan@fiasco.social has a [solution](https://github.com/kellan/aoc/blob/main/2022/rust/day3-rucksack/src/main.rs) with very clean functional calls by implementing helpers.
     * @gadiguibou@mastodon.online [points out that](https://mastodon.online/@gadiguibou/109450630889049793) "`std::HashSet` implements `&HashSet & &HashSet` with output HashSet as an intersection operator to solve exactly this." [docs link](https://doc.rust-lang.org/std/collections/struct.HashSet.html#impl-BitAnd%3C%26HashSet%3CT%2C%20S%3E%3E-for-%26HashSet%3CT%2C%20S%3E)
 * @beeb@hachyderm.io has a [solution](https://github.com/beeb/aoc-2022/blob/main/src/days/day03.rs) which includes multiple implementations with timing, interesting to compare!
+* @neofight78@mastodonapp.uk has a very consise [solution](https://github.com/neofight78/adventofcode2022/blob/master/day03/src/main.rs)
 
 # things to learn about
 * `.copied()`
