@@ -29,6 +29,8 @@ I tried to do this one as a chain of functions and only comparing ends of the ra
 * [@fistons@fosstodon.org](https://github.com/fistons/AOC-2022/blob/main/aoc_4/src/lib.rs)
     * `.collect_tuple()` 🤯
     * Helper functions and `Impl` traits lead to very readable main functions (`part1()`, `part2()`)
+* [@kouhai@treehouse.systems](https://gist.github.com/kouhaidev/29b5244c98203fa2c59bc5fd4289db4d)
+    * Custom iterator for the parsing! Strings in, arrays of a custom struct out. Seems like this would be very composable/reusable. 
 * overall
     * Saw several examples of folks convering booleans to ints for counting. `accumulator + u64::from(bool)` Is this common in Rust? It feels... weird to me. 
     * Again... so much variety! Lots of ideas for improving my implementation. 
