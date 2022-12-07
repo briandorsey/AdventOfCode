@@ -12,6 +12,12 @@ Really liking [bacon](https://github.com/Canop/bacon) for autorunning `cargo` co
 * `color_eyre` makes for really nice error messages.
 
 # review and iterate
+* things to look at - 
+    * how are folks splitting the two parts of the input? 
+    * How flexible is the parsing? 
+    * Any `nom` solutions, how do they handle parsing the state? 
+* has a [solution]()
+
 * 
 
 # things to learn about

@@ -13,6 +13,7 @@ Happy with how this one turned out overall. Yea! 🎉
 * @kanathan@hachyderm.io has a [solution](https://github.com/kanathan/advent_code_2022/blob/master/src/day_6/main.rs) with an iteration chain approach. One helper function broken out, which nicely documents the process, making this very clean. 
 * @JSMuellerRoemer@c.im has a[solution](https://github.com/l0calh05t/advent-of-code-2022/blob/trunk/src/solutions/day_06.rs) with an iteration chain attention to allocations and error handling. 
 * @rosalita@mastodonapp.uk has a [solution](https://github.com/Rosalita/advent-of-code-2022/blob/main/rust/src/bin/6-1.rs) with an imperative approch. Clean helper function which doesn't need parameterization because it verfies the length stays the same. Just one character change between part 1 & 2.
+* @simoncrowe@fosstodon.org has a very compact [solution](https://github.com/simoncrowe/aoc/blob/main/2022/06.rs) using `.windows(seq_len).enumerate().filter((...HashSet... == seq_len).map()`
 
 * has a [solution]()
 
