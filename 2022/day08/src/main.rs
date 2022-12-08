@@ -9,7 +9,9 @@ fn main() -> Result<()> {
     let input = fs::read_to_string(input)?;
 
     let grid = Grid::new(&input)?;
+    let mut scores: Vec<u32> = Vec::new();
     let mut count_visible = 0;
+
     for y in 0..grid.data.len() {
         for x in 0..grid.data[0].len() {
             // assuming rectangular grid
@@ -17,9 +19,18 @@ fn main() -> Result<()> {
             if grid.visible((x, y)) {
                 count_visible += 1;
             }
+
+            scores.push(grid.scenic_score((x, y)));
         }
     }
+    println!("{} x {}", grid.data[0].len(), grid.data.len());
     println!("part1: {count_visible}");
+
+    // part2
+
+    println!("part1: {:?}", scores.iter().max());
+    // 1929312 - high
+    // 433440 - high
 
     Ok(())
 }
@@ -71,10 +82,82 @@ impl Grid {
             .collect();
         segments.push(&binding[..y]); // left of coords
         segments.push(&binding[y + 1..]); // right of coords
-                                          //println!("V: {:?}", height);
-                                          //println!("V: {:?}", segments);
-                                          //println!( "V: {:?}", segments .iter() .map(|seg| seg.iter().all(|e| e < &height)) .collect::<Vec<bool>>());
+
+        //println!("V: {:?}", height);
+        //println!("V: {:?}", segments);
+        //println!( "V: {:?}", segments .iter() .map(|seg| seg.iter().all(|e| e < &height)) .collect::<Vec<bool>>());
         segments.iter().any(|seg| seg.iter().all(|e| e < &height))
+    }
+
+    fn scenic_score(&self, coords: (usize, usize)) -> u32 {
+        let height = self.value_at(coords);
+        let (x, y) = coords;
+
+        let mut segments: Vec<Vec<u32>> = Vec::new();
+        let mut temp: Vec<_> = self.data[y][..x].to_vec(); // above coords
+        temp.reverse();
+        segments.push(temp); // above coords
+        segments.push(self.data[y][x + 1..].to_vec()); // below coords
+
+        let mut binding: Vec<_> = self
+            .data
+            .iter()
+            .map(|e| {
+                e.iter()
+                    .enumerate()
+                    .filter_map(|(i, v)| if i == x { Some(*v) } else { None })
+            })
+            .flatten()
+            .collect();
+        segments.push((&binding[y + 1..]).to_vec()); // right of coords
+        let binding = &mut binding[..y];
+        binding.reverse();
+        segments.push((&binding[..y]).to_vec()); // left of coords
+
+        if !((segments[0].len() + segments[1].len()) == self.data.len() - 1) {
+            panic!()
+        };
+        if !((segments[2].len() + segments[3].len()) == self.data.len() - 1) {
+            panic!("left/right mismatch");
+        };
+
+        //println!("V: {:?}", height);
+        //println!("V: {:?}", segments);
+        for seg in &mut segments {
+            match seg.iter().position(|e| e >= &height) {
+                Some(i) => seg.truncate(i + 1), // seems to be OK with > .len() values
+                None => (),
+            }
+        }
+        if !((segments[0].len() + segments[1].len()) <= self.data.len() - 1) {
+            panic!()
+        };
+
+        //println!("V: {:?}", segments);
+        //println!( "V: {:?}", segments .iter() .map(|seg| seg.iter().all(|e| e < &height)) .collect::<Vec<bool>>());
+        // giving up here in an iterator chain version. I need `take_until`? The last one after
+        // the predicate becomes false
+        /*
+        segments
+            .iter()
+            .map(|seg| {
+                seg.iter()
+                    .take_while(|&e| e < &height)
+                    .inspect(|e| println!("i {e:?}"))
+                    .collect::<Vec<_>>()
+                    .len() as u32
+            })
+            .inspect(|e| println!("{e:?}"))
+            .product()
+        */
+        let temp = segments
+            .iter()
+            .map(|seg| seg.len() as u32)
+            .collect::<Vec<_>>();
+        if temp.iter().product::<u32>() > 0 {
+            //println!("{:?}: {:?}", coords, temp);
+        }
+        segments.iter().map(|seg| seg.len() as u32).product()
     }
 }
 
@@ -155,5 +238,13 @@ mod tests {
         assert_eq!(false, grid.visible((1, 3)), "(1, 3)");
         assert_eq!(true, grid.visible((2, 3)), "(2, 3)");
         assert_eq!(false, grid.visible((3, 3)), "(3, 3)");
+    }
+
+    #[test]
+    fn test_scenic_score() {
+        let grid = Grid::new(DATA).unwrap();
+        println!("{:?}", grid.data);
+        assert_eq!(4, grid.scenic_score((2, 1)));
+        assert_eq!(8, grid.scenic_score((2, 3)));
     }
 }
