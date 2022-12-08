@@ -1,13 +1,13 @@
 
 I tried to do this one as a chain of functions and only comparing ends of the ranges... and... I'm not happy with what I ended up with. :) 
 
-# confusion
+## confusion
 * I got somewhat lost in the logic for finding overlaps. My initial working solution was actually missing a case that I only noticed while adding comments later... and then realized that case was actually covered by previous logic. Case in point. Seems like using std::ops::Range itself and/or HashSets or something where the compilier could help with the logic would be better. Will keep an eye out for that when looking at other's solutions
 
-# TIL
+## TIL
 * `.inspect()` is neat. 
 
-# review and iterate
+## review and iterate
 * [@haskman@functional.cafe](https://github.com/ajnsit/aoc2022/blob/a5927d7082869c223446a547aad86729ccb05777/day4/src/main.rs#L34)
     * tuple -> Type conversion on return *just works*?! Nice. 
 * [@JSMuellerRoemer@c.im](https://github.com/l0calh05t/advent-of-code-2022/blob/trunk/src/solutions/day_04.rs)
@@ -36,7 +36,7 @@ I tried to do this one as a chain of functions and only comparing ends of the ra
     * Again... so much variety! Lots of ideas for improving my implementation. 
 
 
-# things to learn about
+## things to learn about
 * Need to get really comfy with handling Results & Options in iterator chains. 
 * I also asked about learning iteration on Mastodon, and got [some recommendations](https://mastodon.gamedev.place/@ozkriff/109453788104107048) to read through.
 

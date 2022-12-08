@@ -1,14 +1,14 @@
 
-# confusion / questions
+## confusion / questions
 * 
 
-# TIL
+## TIL
 * 
 
-# review and iterate
+## review and iterate
 * has a [solution]()
 * 
 
-# things to learn about
+## things to learn about
 * 
 

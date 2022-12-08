@@ -1,12 +1,12 @@
 Happy with how this one turned out overall. Yea! 🎉
 
-# confusion / questions
+## confusion / questions
 * got stuck trying to call `.windows()` on a `Chars` iterator. Seems like the workaround is to create a `Vec` and call `.windows()` on that? Why doesn't `Chars` also implement windows()? Maybe things are moving towards the `.array_chunks()` nightly? 
 
-# TIL
+## TIL
 * `.windows()` remains awesome. 
 
-# review and iterate
+## review and iterate
 * rob@escaperooms.social has a [solution](https://github.com/rtsuk/advent_of_code_2022/blob/master/src/bin/day6.rs) which uses a generic implementation on a struct based scanner pattern. Also very simple test cases using a helper function. 
 * MichDdev@mastodon.social has an imperative [solution](https://github.com/michd/advent-of-code/blob/main/2022/aoc06/src/main.rs) using `.chars().collect()` then  `.sort()` `.dedup()`.
 * @madlep@hachyderm.io has a [solution](https://github.com/madlep/advent_of_code_2022_rust/blob/main/src/days/day06.rs) using `HashSet.insert()`'s return boolean to check if a `char` has been seen. 
@@ -18,6 +18,6 @@ Happy with how this one turned out overall. Yea! 🎉
 * has a [solution]()
 
 
-# things to learn about
+## things to learn about
 * 
 

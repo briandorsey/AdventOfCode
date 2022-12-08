@@ -1,12 +1,12 @@
 
-# confusion
+## confusion
 * *really* struggled with trying to intersect three `HashSet<char>`s. It seems to create an iterator, and when you collect that, the values become references `&char`... and I couldn't figure out how to `.intersect()` with the final `HashSet<char>` because the interim one is a `HashSet<&char>`. my eventual work around was to pairwise intersect first&second and also second&third, storing each in a temp variable, and intersecting those, because the values match. Pretty sure I'm missing something. :) 
     * Follow up: @ekuber@hachyderm.io asked me to file a ticket on this. It's *awesome* that compiler folks are paying this close attention to where people get stuck. [Here is the ticket](https://github.com/rust-lang/rust/issues/105276)
 
-# TIL
+## TIL
 * 
 
-# review and iterate
+## review and iterate
 * on the intersect question above: 
     * @queer_emma@mastodon.lol has a [solution](https://github.com/queer-emma/aoc2022/blob/main/src/day3.rs) which is pretty much what I was trying to implement, but never got right. Looks like `.copied()` is what I was missing.
     * []() dcreemer has a [solution](https://github.com/dcreemer/adventofcode/blob/main/2022/rust/three/src/main.rs) with a `.fold()` base implementation. 
@@ -20,7 +20,7 @@
 * @beeb@hachyderm.io has a [solution](https://github.com/beeb/aoc-2022/blob/main/src/days/day03.rs) which includes multiple implementations with timing, interesting to compare!
 * @neofight78@mastodonapp.uk has a very consise [solution](https://github.com/neofight78/adventofcode2022/blob/master/day03/src/main.rs)
 
-# things to learn about
+## things to learn about
 * `.copied()`
 * step through l0calh05t's solution to understand it
 * https://lib.rs/crates/im - via [fasterthanlime](https://fasterthanli.me/series/advent-of-code-2022/part-3)
