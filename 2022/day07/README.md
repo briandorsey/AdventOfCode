@@ -19,8 +19,6 @@ Coming back to it in the morning... I'm kinda happy with the overall architectur
     * What does `let mut current_directory = !0;` do? 
 * @beeb@hachyderm.io has a [solution](https://github.com/beeb/aoc-2022/blob/main/src/days/day07.rs) using `nom` parsing by line into an enum representing different kinds of lines. 
 * @b0rk@mastodon.social has a [solution](https://github.com/jvns/aoc2022/blob/main/day07/solve.rs) using recursion over a Folder struct with files & folders `Vec`s. Useful `while let` patterns to pass iterators to recursive functions and modify a queue while processing. 
-* has a [solution]()
-* 
 
 ## things to learn about
 * +1 to looking into `nom` parser crate
