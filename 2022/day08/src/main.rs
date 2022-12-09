@@ -70,6 +70,8 @@ impl Grid {
         let mut segments: Vec<&[u32]> = Vec::new();
         segments.push(&self.data[y][..x]); // above coords
         segments.push(&self.data[y][x + 1..]); // below coords
+
+        // there must be a more idiomatic way to get the vertical segments
         let binding: Vec<_> = self
             .data
             .iter()
@@ -99,6 +101,7 @@ impl Grid {
         segments.push(temp); // above coords
         segments.push(self.data[y][x + 1..].to_vec()); // below coords
 
+        // there must be a more idiomatic way to get the vertical segments
         let mut binding: Vec<_> = self
             .data
             .iter()
