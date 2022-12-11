@@ -7,7 +7,13 @@
 * 
 
 ## review and iterate
-* has a [solution]()
+* @MauveAlert@tech.lgbt [posted](https://tech.lgbt/@MauveAlert/109492764601329890) clear examples of creating iterators. FWIW I used an existing iterator implementation 
+[playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2021&gist=e706064cb62bd63ad58beafcf5867b6c)
+on nightly, you can use TAIT to hide the implementation detail, which is nice for more complicated types
+[playground](https://play.rust-lang.org/?version=nightly&mode=debug&edition=2021&gist=4a5934b3a56ade6883df4db528a18f79)
+    * their [solution](https://github.com/mauvealerts/advent-of-code/blob/main/aoc-2022/src/bin/day10.rs) uses iterator chains. It is very compact and still clear. No `unwrap` (outside of tests)!
+        * `anyhow.ensure!` is neat!
+        * `match` with `|`ed key cycles wouldn't have occured to me. 
 * 
 
 ## things to learn about
