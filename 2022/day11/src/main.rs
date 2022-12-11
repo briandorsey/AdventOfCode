@@ -17,7 +17,7 @@ fn main() -> Result<()> {
     }
 
     // simulate!
-    for _ in 0..20 {
+    for _ in 0..10_000 {
         troop.simulate_round();
     }
 
@@ -38,7 +38,7 @@ fn main() -> Result<()> {
     println!(
         "top inspections: {:?},  part 1: {}",
         &inspections[..2],
-        &inspections[..2].iter().product::<u32>()
+        &inspections[..2].iter().product::<u128>()
     );
 
     Ok(())
@@ -48,24 +48,24 @@ fn main() -> Result<()> {
 enum Operation {
     OldAddOld,
     OldMultOld,
-    OldAdd(u32),
-    OldMult(u32),
+    OldAdd(u64),
+    OldMult(u64),
     None,
 }
 
 #[derive(Debug)]
 #[allow(dead_code)]
 struct Monkey {
-    inspections: u32,
-    items: Vec<u32>,
+    inspections: u128,
+    items: Vec<u64>,
     operation: Operation,
-    test_divisor: u32,
+    test_divisor: u64,
     test_true_monkey: usize,
     test_false_monkey: usize,
 }
 
 impl Monkey {
-    fn inspect(&mut self) -> Vec<(usize, u32)> {
+    fn inspect(&mut self) -> Vec<(usize, u64)> {
         let mut output = Vec::new();
         // inspect & operate on worry levels.
         self.items.iter_mut().for_each(|i| match self.operation {
@@ -76,8 +76,8 @@ impl Monkey {
             Operation::None => unimplemented!(),
         });
 
-        // divide worry level
-        self.items.iter_mut().for_each(|i| *i /= 3);
+        // divide worry level (from part 1)
+        //self.items.iter_mut().for_each(|i| *i /= 3);
 
         // throw items
         for item in self.items.drain(..) {
@@ -100,7 +100,7 @@ impl Monkey {
             Some((_, nums)) => nums
                 .trim()
                 .split(", ")
-                .map(|e| e.parse::<u32>().expect("failed to parse item to int"))
+                .map(|e| e.parse::<u64>().expect("failed to parse item to int"))
                 .collect::<Vec<_>>(),
             _ => unimplemented!(),
         };
@@ -116,13 +116,13 @@ impl Monkey {
                 Some(("*", "old")) => Operation::OldMultOld,
                 Some(("+", num)) => {
                     let num = num
-                        .parse::<u32>()
+                        .parse::<u64>()
                         .unwrap_or_else(|_| panic!("parse int: '{}'", num));
                     Operation::OldAdd(num)
                 }
                 Some(("*", num)) => {
                     let num = num
-                        .parse::<u32>()
+                        .parse::<u64>()
                         .unwrap_or_else(|_| panic!("parse int: '{}'", num));
                     Operation::OldMult(num)
                 }
@@ -138,7 +138,7 @@ impl Monkey {
             .trim()
             .split_once("Test: divisible by ")
             .expect("failed parsing test");
-        let test_divisor = op.parse::<u32>().expect("failed parsing divisor");
+        let test_divisor = op.parse::<u64>().expect("failed parsing divisor");
         let test_true_monkey = spec
             .next()
             .expect("no true monkey")
@@ -175,7 +175,7 @@ impl Default for Monkey {
             inspections: 0,
             items: Vec::new(),
             operation: Operation::None,
-            test_divisor: u32::MAX,
+            test_divisor: u64::MAX,
             test_true_monkey: usize::MAX,
             test_false_monkey: usize::MAX,
         }
@@ -187,7 +187,7 @@ impl Default for Monkey {
 
 struct Troop {
     monkeys: Vec<Monkey>,
-    round: u32,
+    round: u128,
 }
 
 impl Troop {
@@ -200,15 +200,26 @@ impl Troop {
 
     fn simulate_round(&mut self) {
         self.round += 1;
+
+        let mut troop_divisor = 1;
         // direct indexing seems likey a hackey work around... but direct
         // iteration runs into the borrow checker. I'm probably missing an
         // idiomatic pattern
         for id in 0..self.monkeys.len() {
+            troop_divisor *= self.monkeys[id].test_divisor;
+
             let dispatch = self.monkeys[id].inspect();
             for (target, item) in dispatch {
                 //println!("{id}: {target}, {item}");
                 self.monkeys[target].items.push(item);
             }
+        }
+
+        for id in 0..self.monkeys.len() {
+            self.monkeys[id]
+                .items
+                .iter_mut()
+                .for_each(|i| *i %= troop_divisor);
         }
     }
 }
