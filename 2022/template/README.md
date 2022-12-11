@@ -2,7 +2,7 @@
 ## confusion / questions
 * 
 
-## TIL
+## TIL (Learned... or Looked up)
 * 
 
 ## review and iterate
