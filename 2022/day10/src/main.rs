@@ -1,5 +1,4 @@
 use color_eyre::eyre::Result;
-//use color_eyre::eyre::{eyre, Result};
 use std::collections::{HashSet, VecDeque};
 use std::env;
 use std::fs;
@@ -17,6 +16,7 @@ fn main() -> Result<()> {
 
     while device.cycle <= 220 {
         device.tick();
+        //println!("{} -> {}", device.cycle, (device.cycle - 1) % 20);
         if key_cycles.contains(&device.cycle) {
             let signal = device.cycle as i64 * device.x;
             println!("C:{}, X:{}, signal: {}", device.cycle, device.x, signal);
@@ -25,6 +25,7 @@ fn main() -> Result<()> {
     }
 
     println!("part1: {}", signals.iter().sum::<i64>());
+    println!("part2:\n{}", device.crt_render().replace(".", " "));
 
     Ok(())
 }
@@ -47,6 +48,9 @@ struct Device {
     cycle: u64,
     state: State,
     program: VecDeque<Code>,
+
+    crt_buffer: [char; 40],
+    crt_lines: Vec<String>,
 }
 
 impl Device {
@@ -56,12 +60,15 @@ impl Device {
             cycle: 0,
             state: State::Idle,
             program,
+            crt_buffer: [' '; 40],
+            crt_lines: Vec::new(),
         }
     }
 
     fn tick(&mut self) {
         self.cycle += 1;
 
+        // program state
         self.state = match &self.state {
             State::Idle => match self.program.pop_front() {
                 // duplicate logic in Executing branch. :/
@@ -85,7 +92,31 @@ impl Device {
                     State::Executing(counter, code.clone())
                 }
             }
+        };
+
+        // CRT state
+        let index = (self.cycle - 1) % 40;
+        if (self.x - 1..=self.x + 1).contains(&(index as i64)) {
+            self.crt_buffer[index as usize] = '#';
+        } else {
+            self.crt_buffer[index as usize] = '.';
         }
+
+        if (self.cycle % 40) == 0 {
+            self.crt_lines
+                .push(self.crt_buffer.iter().collect::<String>());
+            self.crt_buffer = [' '; 40];
+        }
+    }
+
+    fn crt_render(&self) -> String {
+        let mut output = String::new();
+        for line in &self.crt_lines {
+            output.push_str(line);
+            output.push('\n');
+        }
+        output.push_str(self.crt_buffer.iter().collect::<String>().trim());
+        output
     }
 }
 
@@ -165,5 +196,22 @@ mod tests {
         assert_eq!(6, device.cycle, "cycle");
         assert_eq!(State::Idle, device.state, "state");
         assert_eq!(-1, device.x, "X");
+    }
+
+    #[test]
+    fn test_crt_buffer() {
+        let test_data = include_str!("../test.txt");
+        let program = parse_program(&test_data);
+        let mut device = Device::new(program);
+        device.tick();
+        assert_eq!("#", device.crt_render());
+        device.tick();
+        assert_eq!("##", device.crt_render());
+        device.tick();
+        assert_eq!("##.", device.crt_render());
+        for _ in 0..=17 {
+            device.tick();
+        }
+        assert_eq!("##..##..##..##..##..#", device.crt_render());
     }
 }
