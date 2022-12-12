@@ -20,8 +20,31 @@ fn main() -> Result<()> {
         |p| grid.check_goal(p),
     )
     .unwrap();
-    println!("{:?}", part1_result);
+    println!("part 1: {:?}", part1_result.1);
 
+    // I'll bet there is a better algorithm for this, but let's try brute force first.
+    let a_starts: Vec<_> = grid
+        .rows
+        .iter()
+        .flatten()
+        .filter(|p| p.h == 0)
+        .map(|p| (p.x, p.y))
+        .collect();
+
+    let mut lengths: Vec<i32> = Vec::new();
+
+    for start in &a_starts {
+        if let Some(length) = astar(
+            start,
+            |p| grid.successors(p),
+            |p| grid.heuristic(p),
+            |p| grid.check_goal(p),
+        ) {
+            lengths.push(length.1);
+        }
+    }
+
+    println!("part 2: {:?}", lengths.iter().min().unwrap());
     Ok(())
 }
 
