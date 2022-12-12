@@ -11,6 +11,7 @@
 
 ## TIL (Learned... or Looked up)
 * looked up lots of things, but forgot to note them. :/
+* when you specifically want side effects from an iterator, use `.for_each()` and to explicity force the iterator to be consumed, `.for_each(drop)`
 
 ## review and iterate
 * 
