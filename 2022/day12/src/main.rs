@@ -11,7 +11,6 @@ fn main() -> Result<()> {
 
     let grid = Grid::parse_input(input.as_str());
     println!("{grid}");
-    //println!("{:?}\n{:?}", grid.start, grid.end);
 
     let part1_result = astar(
         &grid.start,
