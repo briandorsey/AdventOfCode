@@ -47,6 +47,7 @@ struct Grid {
     min_xy: (usize, usize),
     max_xy: (usize, usize),
     draw_buffer: usize,
+    floor_y: Option<usize>,
 }
 
 impl Grid {
@@ -68,13 +69,9 @@ impl Grid {
         'outer: while pos.1 < self.max_xy.1 {
             //println!("pos: {pos:?}");
             //if down blocked
-            if self.data.contains_key(&(pos.0, pos.1 + 1)) {
+            if self.contains_key(&(pos.0, pos.1 + 1)) {
                 let candidates = [(pos.0 - 1, pos.1 + 1), (pos.0 + 1, pos.1 + 1)];
-                if candidates
-                    .iter()
-                    .map(|p| self.data.contains_key(p))
-                    .all(|e| e)
-                {
+                if candidates.iter().map(|p| self.contains_key(p)).all(|e| e) {
                     //println!("inserting (at rest): ({}, {})", pos.0, pos.1);
                     if pos == Grid::ORIGIN {
                         println!("source blocked!");
@@ -87,7 +84,7 @@ impl Grid {
                 }
 
                 for candidate in candidates {
-                    if !self.data.contains_key(&candidate) {
+                    if !self.contains_key(&candidate) {
                         pos = candidate;
                         //println!("continue 'outer");
                         continue 'outer;
@@ -151,14 +148,31 @@ impl Grid {
             min_xy: (min_x, 0),
             max_xy: (max_x, max_y),
             draw_buffer: 1,
+            floor_y: None,
         })
     }
+
     fn add_floor(&mut self, offset: usize) {
-        // not actually infinite...
-        for i in 0..=2000 {
-            self.data.insert((i, self.max_xy.1 + offset), Mat::Rock);
-        }
+        self.floor_y = Some(self.max_xy.1 + offset);
         self.max_xy.1 += offset;
+    }
+
+    fn get(&self, k: &(usize, usize)) -> Option<&Mat> {
+        match self.data.get(k) {
+            Some(v) => Some(v),
+            None if self.floor_y.is_some() => {
+                if self.floor_y.unwrap() == k.1 {
+                    Some(&Mat::Rock)
+                } else {
+                    None
+                }
+            }
+            None => None,
+        }
+    }
+
+    fn contains_key(&self, k: &(usize, usize)) -> bool {
+        self.get(k).is_some()
     }
 }
 
@@ -170,7 +184,7 @@ impl Display for Grid {
         for y in 0..=max_y {
             write!(f, "{y:>2} ")?;
             for x in min_x..=max_x {
-                write!(f, "{}", self.data.get(&(x, y)).unwrap_or(&Mat::Air))?;
+                write!(f, "{}", self.get(&(x, y)).unwrap_or(&Mat::Air))?;
             }
             writeln!(f)?;
         }
@@ -248,6 +262,8 @@ mod tests {
 12 ....................
 13 ....................
 14 ....................
+15 ....................
+16 ....................
 "#;
         grid.draw_buffer = 5; // override for tests
         grid.add_floor(2);
