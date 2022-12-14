@@ -13,18 +13,29 @@ fn main() -> Result<()> {
     let input = fs::read_to_string(input)?;
     let mut grid = Grid::parse_input(&input)?;
 
-    println!("{grid}");
+    //println!("{grid}");
 
     let observe = vec![1, 2, 5, 22, 24];
-
     while grid.drop_to_rest() {
         if observe.contains(&grid.resting_grains) {
-            println!("{grid}");
+            //println!("{grid}");
         }
     }
-
     println!("{grid}");
     println!("part1: {}", grid.resting_grains);
+
+    let mut grid2 = Grid::parse_input(&input)?;
+    grid2.add_floor(2);
+    grid2.draw_buffer = 5;
+    let observe = vec![1, 2, 5, 22, 24];
+    while grid2.drop_to_rest() {
+        if observe.contains(&grid2.resting_grains) {
+            //println!("{grid2}");
+        }
+    }
+    println!("{grid2}");
+    println!("part2: {}", grid2.resting_grains);
+
     Ok(())
 }
 
@@ -65,6 +76,11 @@ impl Grid {
                     .all(|e| e)
                 {
                     //println!("inserting (at rest): ({}, {})", pos.0, pos.1);
+                    if pos == Grid::ORIGIN {
+                        println!("source blocked!");
+                        self.resting_grains += 1;
+                        return false;
+                    }
                     assert_eq!(None, self.data.insert((pos.0, pos.1), Mat::Sand));
                     self.resting_grains += 1;
                     return true;
@@ -137,6 +153,13 @@ impl Grid {
             draw_buffer: 1,
         })
     }
+    fn add_floor(&mut self, offset: usize) {
+        // not actually infinite...
+        for i in 0..=2000 {
+            self.data.insert((i, self.max_xy.1 + offset), Mat::Rock);
+        }
+        self.max_xy.1 += offset;
+    }
 }
 
 impl Display for Grid {
@@ -201,6 +224,33 @@ mod tests {
  9 #########.
 "#;
         grid.draw_buffer = 0; // override for tests
+        println!("expected:\n{}", display);
+        println!("actual:\n{}", grid);
+        assert_eq!(display, format!("{}", grid));
+    }
+
+    #[test]
+    fn test_floor() {
+        println!("{}", TEST_DATA); //temp
+        let mut grid = Grid::parse_input(TEST_DATA).unwrap();
+        let display = r#" 0 ...........+........
+ 1 ....................
+ 2 ....................
+ 3 ....................
+ 4 .........#...##.....
+ 5 .........#...#......
+ 6 .......###...#......
+ 7 .............#......
+ 8 .............#......
+ 9 .....#########......
+10 ....................
+11 ####################
+12 ....................
+13 ....................
+14 ....................
+"#;
+        grid.draw_buffer = 5; // override for tests
+        grid.add_floor(2);
         println!("expected:\n{}", display);
         println!("actual:\n{}", grid);
         assert_eq!(display, format!("{}", grid));
