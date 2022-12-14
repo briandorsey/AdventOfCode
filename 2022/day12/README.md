@@ -8,7 +8,7 @@ I didn't take any notes along the way... got too into the problem, I guess. I sp
 * `pathfinding` is perfect for this sort of thing.
 
 ## review and iterate
-* 
+* [blog post](https://rfc1149.net/blog/2022/12/12/patterns-references-lifetime/) from @rfc1149@masto.ai, the author of the `pathfinding` library. Turns out it has a `Matrix` to store the grid in that I could have used! Reading. :)
 * 
 
 ## things to learn about
