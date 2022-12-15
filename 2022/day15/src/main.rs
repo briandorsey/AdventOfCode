@@ -1,6 +1,4 @@
 use color_eyre::eyre::Result;
-//use color_eyre::eyre::{eyre, Result};
-//use itertools::Itertools;
 use std::collections::HashSet;
 use std::ops::RangeInclusive;
 
@@ -12,7 +10,26 @@ fn main() -> Result<()> {
 
     let (sensors, beacons) = parse_input(&_INPUT);
     let count = count_of_non_beacon(2_000_000, &sensors, &beacons);
-    println!("part1: {}", count);
+    println!("part1     : {}", count);
+
+    // part 2
+    let (sensors, _) = parse_input(&TEST_INPUT);
+    let distress = find_beacon((0, 20), &sensors);
+    println!(
+        "part2 test: ({} * 4,000,000) + {} = {}",
+        distress.0,
+        distress.1,
+        (distress.0 * 4_000_000) + distress.1
+    );
+
+    let (sensors, _) = parse_input(&_INPUT);
+    let distress = find_beacon((0, 4_000_000), &sensors);
+    println!(
+        "part2     : ({} * 4,000,000) + {} = {}",
+        distress.0,
+        distress.1,
+        (distress.0 as i128 * 4_000_000_i128) + distress.1 as i128
+    ); // 12051287042458
 
     Ok(())
 }
@@ -28,6 +45,43 @@ fn parse_input(input: &[(Pos, Pos)]) -> (Sensors, Beacons) {
         .collect();
     let beacons: HashSet<_> = input.iter().map(|(_, beacon)| *beacon).collect();
     (sensors, beacons)
+}
+
+fn find_beacon(limits: (i32, i32), sensors: &Sensors) -> Pos {
+    for (y, row) in (limits.0..=limits.1).enumerate() {
+        let mut ranges: Vec<_> = sensors.iter().map(|s| overlap_ends(row, s)).collect();
+        ranges.sort();
+        //println!("before reduce: len: {}", ranges.len(),);
+        let mut ranges = reduce_overlaps(&ranges);
+        //println!("after reduce: len: {}", ranges.len(),);
+
+        // trim to limits
+        for r in &mut ranges {
+            if r.0 < limits.0 {
+                r.0 = limits.0
+            }
+            if r.1 > limits.1 {
+                r.1 = limits.1
+            }
+        }
+
+        for _offset in ranges.iter().take(25) {
+            //print!(", {:?}", _offset,);
+        }
+        //println!();
+
+        let exclude_count = ranges
+            .iter()
+            .map(positions_in_range)
+            //.inspect(|sum| print!(", {sum}"))
+            .sum::<i32>();
+        //println!("{exclude_count}");
+        // actually just finding the first case of exactly one uncovered position. :/
+        if exclude_count == limits.1 {
+            return (ranges[0].1 + 1, y.try_into().unwrap());
+        }
+    }
+    (-123, -123)
 }
 
 fn count_of_non_beacon(row: i32, sensors: &Sensors, beacons: &Beacons) -> i32 {
