@@ -10,8 +10,8 @@ Been doing pretty struct+method heavy solutions... going to try to do more itera
 * 
 
 ## review and iterate
-* has a [solution]()
-* 
+* @whatyouhide@mas.to has a [solution](https://github.com/whatyouhide/advent_of_code_2022/blob/main/src/day14.rs) with a `match` based decision tree and `HashMap` grid. (Article from the author](https://andrealeopardi.com/posts/advent-of-code-2022/#day-14)
+*  
 
 ## things to learn about
 * 
