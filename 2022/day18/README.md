@@ -1,18 +1,10 @@
+This took me the longest yet. Hope it stays as the high water mark. Mostly because I tried multiple approaches that didn't work for part 2. Re-reading the question contained a hint to an approach that worked find. Doh! It's always reading. 
 
 ## confusion / questions
-* Why can't I sum u8s? ... or maybe... why is it a reference? All the values() call. ... let's try to dereference. Nope, it was u8 vs u64!
-```
- 1  error[E0277]: the trait bound `u64: Sum<&u8>` is not satisfied
-     --> src/main.rs:23:5
-      |
- 23   |     shape.values().sum()
-      |     ^^^^^^^^^^^^^^ --- required by a bound introduced by this call
-      |     |
-      |     the trait `Sum<&u8>` is not implemented for `u64`
-```
+* 
 
 ## TIL (Learned... or Looked up)
-* 
+* `loop` was helpful to avoid keeping references to a datastructure that I needed to mutate while looping over. `for` wouldn't have worked, I don't think.
 
 ## review and iterate
 * has a [solution]()

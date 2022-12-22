@@ -1,11 +1,10 @@
 use color_eyre::eyre::Result;
-use tracing::{debug, info, trace, Level};
-use tracing_subscriber::FmtSubscriber;
-//use color_eyre::eyre::{eyre, Result};
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap, HashSet};
 use std::env;
 use std::fmt::{Display, Formatter};
 use std::fs;
+use tracing::{info, trace, Level};
+use tracing_subscriber::FmtSubscriber;
 
 fn main() -> Result<()> {
     let input = env::args_os().nth(1).expect("need input file name");
@@ -30,12 +29,11 @@ fn main() -> Result<()> {
 
     info!("part 1: {}", surface_area(&input));
     info!("part 2: {}", external_surface_area(&input));
-    // 2296 low
 
     Ok(())
 }
 
-#[derive(Eq, Hash, PartialEq, Debug, Copy, Clone)]
+#[derive(Eq, Hash, PartialEq, Debug, Copy, Clone, PartialOrd, Ord)]
 struct Coords(i32, i32, i32);
 
 impl Display for Coords {
@@ -47,7 +45,7 @@ impl Display for Coords {
 fn build_shape(cubes: &HashSet<Coords>) -> HashMap<Coords, u64> {
     let mut shape: HashMap<Coords, u64> = HashMap::new();
     for cube in cubes {
-        if shape.get_mut(&cube).is_some() {
+        if shape.get_mut(cube).is_some() {
             panic!("Coord already in shape: {:?}", cube);
         }
         match insert_helper(&mut shape, *cube) {
@@ -58,7 +56,7 @@ fn build_shape(cubes: &HashSet<Coords>) -> HashMap<Coords, u64> {
     shape
 }
 
-fn insert_helper<'a>(shape: &mut HashMap<Coords, u64>, cube: Coords) -> Option<u64> {
+fn insert_helper(shape: &mut HashMap<Coords, u64>, cube: Coords) -> Option<u64> {
     trace!("C--{cube:?}");
     let mut exposed_sides = 6;
     let adjecents = vec![
@@ -83,295 +81,155 @@ fn insert_helper<'a>(shape: &mut HashMap<Coords, u64>, cube: Coords) -> Option<u
     }
 }
 
+#[derive(Debug)]
+struct Bounds {
+    min_x: i32,
+    max_x: i32,
+    min_y: i32,
+    max_y: i32,
+    min_z: i32,
+    max_z: i32,
+}
+
+impl Bounds {
+    fn new(shape: &HashMap<Coords, u64>) -> Bounds {
+        let mut b = Bounds {
+            min_x: i32::MAX,
+            max_x: i32::MIN,
+            min_y: i32::MAX,
+            max_y: i32::MIN,
+            min_z: i32::MAX,
+            max_z: i32::MIN,
+        };
+        for c in shape.keys() {
+            if c.0 < b.min_x {
+                b.min_x = c.0
+            };
+            if c.0 > b.max_x {
+                b.max_x = c.0
+            };
+            if c.1 < b.min_y {
+                b.min_y = c.1
+            };
+            if c.1 > b.max_y {
+                b.max_y = c.1
+            };
+            if c.2 < b.min_z {
+                b.min_z = c.2
+            };
+            if c.2 > b.max_z {
+                b.max_z = c.2
+            };
+        }
+        // pad each dimention with 1
+        trace!("bounds: {:?}", b);
+        b.min_x -= 1;
+        b.max_x += 1;
+        b.min_y -= 1;
+        b.max_y += 1;
+        b.min_z -= 1;
+        b.max_z += 1;
+        trace!("bounds: {:?}", b);
+        b
+    }
+
+    fn contains(&self, c: &Coords) -> bool {
+        c.0 >= self.min_x
+            && c.0 <= self.max_x
+            && c.1 >= self.min_y
+            && c.1 <= self.max_y
+            && c.2 >= self.min_z
+            && c.2 <= self.max_z
+    }
+}
+
 fn surface_area(cubes: &HashSet<Coords>) -> u64 {
     let shape = build_shape(cubes);
     shape.values().sum()
 }
 
-// deeeeply embarrased by the cut/paste of this approach, but I wanted to at least
-// see if this logic worked. And then I needed to sleep. Checking it in just
-// for reference of how bad this initial solution is.
-// TODO: serious refactor.
-// Nevermind, this doesn't work either. And it never would have. This tries to
-// fill in external curves in the shape. Doh!
-fn _external_surface_area_fill(cubes: &HashSet<Coords>) -> u64 {
-    // try another approach: for each z & each y, check each x row ...
-    // if any spots are missing, fill them in using the same alg as build_shape()
-    let mut shape = build_shape(cubes);
-    let mut min_z = i32::MAX;
-    let mut max_z = i32::MIN;
-    for cube in shape.keys() {
-        if cube.2 < min_z {
-            min_z = cube.2
-        }
-        if cube.2 > max_z {
-            max_z = cube.2
-        }
-    }
+// oh hey, re-reading the question is useful. Let's try a "steam" fill method.
+fn external_surface_area(cubes: &HashSet<Coords>) -> u64 {
+    // determine bounds of the shape, add one to each dimention to find the cube to fill.
+    // loop from a starting corner
+    // * for 6 possible neighbors, lookup and see if a cube is there. if so, that's an
+    // external cube, and +1 external face. If more air, then add to the list of steam locations
+    // to check.
+    // append current location to list of checked steam locations.
+    //
+    // Now we have a list of all steam locations, and have incremented for all external faces?
+    // I think. Let's try it.
 
-    let mut added_cubes: Vec<Coords> = Vec::new();
+    trace!("-------- external_surface_area() -------");
 
-    for z in min_z..=max_z {
-        let mut level: Vec<(i32, i32)> = shape
-            .keys()
-            .filter_map(|c| if c.2 == z { Some((c.0, c.1)) } else { None })
-            .collect();
-        level.sort();
-        trace!("---- z:{z}: {level:?}");
-        let mut x_map: HashMap<i32, Vec<i32>> = HashMap::new();
-        for (x, y) in level {
-            x_map.entry(x).and_modify(|e| e.push(y)).or_insert(vec![y]);
-        }
-        for (x, y_vec) in x_map {
-            trace!("---- z:{z}: x:{x} {y_vec:?}");
-            let min = y_vec.iter().min().unwrap().clone();
-            let max = y_vec.iter().max().unwrap().clone();
-            //println!("------- min: {} max: {}", min, max,);
-            if (max - min) > 1 {
-                debug!("-- z: {z} x:{x}, ys: {y_vec:?}");
-                for y in min..=max {
-                    if !y_vec.contains(&y) {
-                        debug!("---- ({x}, {y}, {z}) missing {y}, adding.");
-                        insert_helper(&mut shape, Coords(x, y, z));
-                        added_cubes.push(Coords(x, y, z))
-                    }
-                }
-            }
-        }
-    }
-    info!("total added_cubes (z,x): {}", added_cubes.len());
-
-    for z in min_z..=max_z {
-        let mut level: Vec<(i32, i32)> = shape
-            .keys()
-            .filter_map(|c| if c.2 == z { Some((c.0, c.1)) } else { None })
-            .collect();
-        level.sort();
-        trace!("---- z:{z}: {level:?}");
-        let mut y_map: HashMap<i32, Vec<i32>> = HashMap::new();
-        for (x, y) in level {
-            y_map.entry(y).and_modify(|e| e.push(x)).or_insert(vec![x]);
-        }
-        for (y, x_vec) in y_map {
-            trace!("---- z:{z}: x:{y} {x_vec:?}");
-            let min = x_vec.iter().min().unwrap().clone();
-            let max = x_vec.iter().max().unwrap().clone();
-            //println!("------- min: {} max: {}", min, max,);
-            if (max - min) > 1 {
-                debug!("-- z: {z} y:{y}, xs: {x_vec:?}");
-                for x in min..=max {
-                    if !x_vec.contains(&x) {
-                        debug!("---- ({x}, {y}, {z}) missing {y}, adding.");
-                        insert_helper(&mut shape, Coords(x, y, z));
-                        added_cubes.push(Coords(x, y, z))
-                    }
-                }
-            }
-        }
-    }
-    info!("total added_cubes (z,y): {}", added_cubes.len());
-
-    // oh, right, we need to check for gaps along the z axis as well.
-    // huge hack, but lets just... repeat the logic but swap x & z.
-    let mut min_x = i32::MAX;
-    let mut max_x = i32::MIN;
-    for cube in shape.keys() {
-        if cube.0 < min_x {
-            min_x = cube.0
-        }
-        if cube.0 > max_x {
-            max_x = cube.0
-        }
-    }
-
-    for x in min_x..=max_x {
-        let mut level: Vec<(i32, i32)> = shape
-            .keys()
-            .filter_map(|c| if c.2 == x { Some((c.2, c.1)) } else { None })
-            .collect();
-        level.sort();
-        trace!("---- x:{x}: {level:?}");
-        let mut z_map: HashMap<i32, Vec<i32>> = HashMap::new();
-        let mut y_map: HashMap<i32, Vec<i32>> = HashMap::new();
-        for (z, y) in level {
-            z_map.entry(z).and_modify(|e| e.push(y)).or_insert(vec![y]);
-            y_map.entry(y).and_modify(|e| e.push(z)).or_insert(vec![z]);
-        }
-        for (z, y_vec) in z_map {
-            trace!("---- x:{x}: z:{z} {y_vec:?}");
-            let min = y_vec.iter().min().unwrap().clone();
-            let max = y_vec.iter().max().unwrap().clone();
-            //println!("------- min: {} max: {}", min, max,);
-            if (max - min) > 1 {
-                debug!("-- x: {x} z:{z}, ys: {y_vec:?}");
-                for y in min..=max {
-                    if !y_vec.contains(&y) {
-                        debug!("---- ({x}, {y}, {z}) missing {y}, adding.");
-                        insert_helper(&mut shape, Coords(x, y, z));
-                        added_cubes.push(Coords(x, y, z))
-                    }
-                }
-            }
-        }
-    }
-    info!("total added_cubes (x,z): {}", added_cubes.len());
-
-    for x in min_x..=max_x {
-        let mut level: Vec<(i32, i32)> = shape
-            .keys()
-            .filter_map(|c| if c.2 == x { Some((c.2, c.1)) } else { None })
-            .collect();
-        level.sort();
-        trace!("---- x:{x}: {level:?}");
-        let mut z_map: HashMap<i32, Vec<i32>> = HashMap::new();
-        let mut y_map: HashMap<i32, Vec<i32>> = HashMap::new();
-        for (z, y) in level {
-            z_map.entry(z).and_modify(|e| e.push(y)).or_insert(vec![y]);
-            y_map.entry(y).and_modify(|e| e.push(z)).or_insert(vec![z]);
-        }
-        for (y, z_vec) in y_map {
-            trace!("---- x:{x}: y:{y} {z_vec:?}");
-            let min = z_vec.iter().min().unwrap().clone();
-            let max = z_vec.iter().max().unwrap().clone();
-            //println!("------- min: {} max: {}", min, max,);
-            if (max - min) > 1 {
-                debug!("-- x: {x} y:{y}, zs: {z_vec:?}");
-                for z in min..=max {
-                    if !z_vec.contains(&z) {
-                        debug!("---- ({x}, {y}, {z}) missing {y}, adding.");
-                        insert_helper(&mut shape, Coords(x, y, z));
-                        added_cubes.push(Coords(x, y, z))
-                    }
-                }
-            }
-        }
-    }
-    info!("total added_cubes (x,y): {}", added_cubes.len());
-
-    // .... and of course, y, too.
-    // huge hack, but lets just... repeat the logic again????
-    let mut min_y = i32::MAX;
-    let mut max_y = i32::MIN;
-    for cube in shape.keys() {
-        if cube.1 < min_y {
-            min_y = cube.1
-        }
-        if cube.1 > max_y {
-            max_y = cube.1
-        }
-    }
-
-    for y in min_y..=max_y {
-        let mut level: Vec<(i32, i32)> = shape
-            .keys()
-            .filter_map(|c| if c.1 == y { Some((c.2, c.0)) } else { None })
-            .collect();
-        level.sort();
-        trace!("---- y:{y}: {level:?}");
-        let mut z_map: HashMap<i32, Vec<i32>> = HashMap::new();
-        for (z, x) in level {
-            z_map.entry(z).and_modify(|e| e.push(x)).or_insert(vec![x]);
-        }
-        for (z, x_vec) in z_map {
-            trace!("---- y:{y}: z:{z} {x_vec:?}");
-            let min = x_vec.iter().min().unwrap().clone();
-            let max = x_vec.iter().max().unwrap().clone();
-            //println!("------- min: {} max: {}", min, max,);
-            if (max - min) > 1 {
-                debug!("-- y: {y} z:{z}, xs: {x_vec:?}");
-                for x in min..=max {
-                    if !x_vec.contains(&x) {
-                        debug!("---- ({x}, {y}, {z}) missing {y}, adding.");
-                        insert_helper(&mut shape, Coords(x, y, z));
-                        added_cubes.push(Coords(x, y, z))
-                    }
-                }
-            }
-        }
-    }
-    info!("total added_cubes (y,z): {}", added_cubes.len());
-
-    for y in min_y..=max_y {
-        let mut level: Vec<(i32, i32)> = shape
-            .keys()
-            .filter_map(|c| if c.1 == y { Some((c.2, c.0)) } else { None })
-            .collect();
-        level.sort();
-        trace!("---- y:{y}: {level:?}");
-        let mut x_map: HashMap<i32, Vec<i32>> = HashMap::new();
-        for (z, x) in level {
-            x_map.entry(x).and_modify(|e| e.push(z)).or_insert(vec![z]);
-        }
-        for (x, z_vec) in x_map {
-            trace!("---- y:{y}: x:{x} {z_vec:?}");
-            let min = z_vec.iter().min().unwrap().clone();
-            let max = z_vec.iter().max().unwrap().clone();
-            //println!("------- min: {} max: {}", min, max,);
-            if (max - min) > 1 {
-                debug!("-- y: {y} x:{x}, zs: {z_vec:?}");
-                for z in min..=max {
-                    if !z_vec.contains(&z) {
-                        debug!("---- ({x}, {y}, {z}) missing {y}, adding.");
-                        insert_helper(&mut shape, Coords(x, y, z));
-                        added_cubes.push(Coords(x, y, z))
-                    }
-                }
-            }
-        }
-    }
-    info!("total added_cubes (y,x): {}", added_cubes.len());
-
-    // double check that all the cubes we added are completely surrounded
-    for cube in added_cubes {
-        let Some(exposed_sides) = shape.get(&cube) else {
-              panic!("just added cube wasn't in shape: {:?}", cube)
-        };
-        assert_eq!(
-            0, *exposed_sides,
-            "exposed sides: {exposed_sides} for {cube:?}",
-        );
-    }
-
-    shape.values().sum()
-}
-
-// this doesn't work because projections can shadow texture
-// had to plot the projections to understand, though
-fn _external_surface_area_planes(cubes: &HashSet<Coords>) -> u64 {
     let shape = build_shape(cubes);
-    let x_surface: HashSet<_> = shape.keys().map(|c| Coords(0, c.1, c.2)).collect();
-    debug!("x_surface.len(): {}", x_surface.len());
-    debug!(
-        "x_surface: {}",
-        x_surface
-            .iter()
-            .map(|c| format!("{}", c))
-            .collect::<Vec<_>>()
-            .join(", ")
+    let bounds = Bounds::new(&shape);
+
+    // BTreeSet has pop methods, and regular HashSets don't
+    let mut to_check: BTreeSet<Coords> = BTreeSet::new();
+    let mut visited_steam: HashSet<Coords> = HashSet::new();
+    let mut external_face_count = 0;
+
+    // extra stuff for debugging help
+    let mut found_at: Vec<Coords> = Vec::new();
+    let mut found_at_set: HashSet<Coords> = HashSet::new();
+    let mut found_count: HashMap<Coords, i32> = HashMap::new();
+
+    // starting position should be outside of shape due to padding
+    to_check.insert(Coords(bounds.min_x, bounds.min_y, bounds.min_z));
+    loop {
+        let Some(pos) = to_check.pop_last()  else{ break};
+        trace!("check: {}", pos);
+        assert!(!visited_steam.contains(&pos));
+        assert!(!shape.contains_key(&pos));
+        visited_steam.insert(pos);
+
+        let mut adjecents = vec![
+            Coords(pos.0 + 1, pos.1, pos.2),
+            Coords(pos.0 - 1, pos.1, pos.2),
+            Coords(pos.0, pos.1 + 1, pos.2),
+            Coords(pos.0, pos.1 - 1, pos.2),
+            Coords(pos.0, pos.1, pos.2 + 1),
+            Coords(pos.0, pos.1, pos.2 - 1),
+        ];
+        for side in adjecents.drain(..) {
+            if shape.get(&side).is_some() {
+                trace!("   found shape at : {}", side);
+                external_face_count += 1;
+                found_at.push(pos);
+                found_at_set.insert(pos);
+                found_count.entry(pos).and_modify(|e| *e += 1).or_insert(1);
+            } else if bounds.contains(&side) {
+                if !visited_steam.contains(&side) {
+                    trace!("   add to to_check: {:?}", side);
+                    to_check.insert(side);
+                } else {
+                    trace!("   already checked: {}", side);
+                }
+            } else {
+                trace!("   out of bounds  : {}", side);
+            }
+        }
+    }
+
+    trace!("to_check: {}  (expecting 0)", to_check.len());
+
+    let x = bounds.max_x - bounds.min_x + 1;
+    let y = bounds.max_y - bounds.min_y + 1;
+    let z = bounds.max_z - bounds.min_z + 1;
+    trace!("bounds: {} x {} x {} = {} ", x, y, z, x * y * z);
+    trace!("visited_steam: {}", visited_steam.len());
+    trace!("shape: {}", shape.len());
+    trace!(
+        " bounds - (visited_steam + shape) = {} spaces inside shape",
+        (x * y * z) - (visited_steam.len() + shape.len()) as i32
     );
-    let y_surface: HashSet<_> = shape.keys().map(|c| Coords(c.0, 0, c.2)).collect();
-    debug!("y_surface.len(): {}", y_surface.len());
-    debug!(
-        "y_surface: {}",
-        y_surface
-            .iter()
-            .map(|c| format!("{}", c))
-            .collect::<Vec<_>>()
-            .join(", ")
-    );
-    let z_surface: HashSet<_> = shape.keys().map(|c| Coords(c.0, c.1, 0)).collect();
-    debug!("z_surface.len(): {}", z_surface.len());
-    debug!(
-        "z_surface: {}",
-        z_surface
-            .iter()
-            .map(|c| format!("{}", c))
-            .collect::<Vec<_>>()
-            .join(", ")
-    );
-    (x_surface.len() * 2 + y_surface.len() * 2 + z_surface.len() * 2)
-        .try_into()
-        .unwrap()
+    trace!("found_at: {}", found_at.len());
+    trace!("found_at_set: {}", found_at_set.len());
+    //trace!("found_at_set: {:?}", found_at_set);
+    trace!("found_count: {:?}", found_count);
+
+    external_face_count
 }
 
 fn parse_input(input: &str) -> HashSet<Coords> {
