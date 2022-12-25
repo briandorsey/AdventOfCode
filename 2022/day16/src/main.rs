@@ -1,13 +1,15 @@
 use color_eyre::eyre::eyre;
 use color_eyre::eyre::Result;
+use itertools::chain;
+use itertools::Itertools;
 use petgraph::algo::astar;
 use petgraph::graph::{Graph, NodeIndex};
 use petgraph::visit::DfsPostOrder;
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::env;
 use std::fmt::{Display, Formatter};
 use std::fs;
-use tracing::{info, trace, Level};
+use tracing::{debug, info, trace, Level};
 use tracing_subscriber::FmtSubscriber;
 
 fn main() -> Result<()> {
@@ -27,12 +29,14 @@ fn main() -> Result<()> {
         .finish();
     tracing::subscriber::set_global_default(subscriber)
         .expect("setting tracing default subscriber failed");
-    info!("{input:?}");
+    info!("");
+    debug!("{input:?}");
     let input = fs::read_to_string(input)?;
 
     let mut graph: Graph<Valve, i32, petgraph::Directed> = Graph::new();
     let mut nodes: HashMap<ValveID, NodeIndex> = HashMap::new();
     let mut edges: Vec<(ValveID, ValveID)> = Vec::new();
+    let mut valve_locs: HashSet<ValveID> = HashSet::new();
     for line in input.lines() {
         let line = line.replace("Valve ", "");
         let line = line.replace("tunnels", "tunnel");
@@ -54,8 +58,12 @@ fn main() -> Result<()> {
             id: valveid.to_string(),
             flow_rate: flow_rate.parse::<i32>().expect("flow_rate to int"),
         };
+        if valve.flow_rate > 0 {
+            valve_locs.insert(valveid.to_string());
+        }
         let node = graph.add_node(valve);
         nodes.insert(valveid.to_string(), node);
+
         //println!("  --> {valve}");
     }
     for (a, b) in edges {
@@ -65,58 +73,170 @@ fn main() -> Result<()> {
 
     // graph info
     //graph.remove_node(nodes["II"]);
-    trace!("graph.is_directed(): {}", graph.is_directed());
-    trace!("graph.node_count(): {}", graph.node_count());
-    trace!("graph.edge_count(): {}", graph.edge_count());
-
-    // get minimum cost path from AA to HH
-    let (_, path) = astar(
-        &graph,
-        nodes["AA"],
-        |finish| finish == nodes["HH"],
-        |e| *e.weight(),
-        |_| 0,
-    )
-    .ok_or(eyre!("astar failed"))?;
-    trace!(
-        "AA-->HH: {:?}",
-        &path
-            .iter()
-            .map(|n| graph.node_weight(*n).unwrap().id.clone())
-            .collect::<Vec<_>>()
-    );
-    trace!(
-        "AA-->HH: {:?}",
-        &path
-            .iter()
-            .map(|n| graph.node_weight(*n).unwrap().flow_rate)
-            .collect::<Vec<_>>()
-    );
-
-    trace!("");
+    debug!("graph.is_directed(): {}", graph.is_directed());
+    debug!("graph.node_count(): {}", graph.node_count());
+    debug!("graph.edge_count(): {}", graph.edge_count());
+    debug!("valve_locs: {:?}", valve_locs);
+    debug!("");
     //println!("{}", petgraph::dot::Dot::new(&graph));
     //println!("{:#?}", &graph);
 
-    // summarize nodes - remove 0 rate nodes with only two peers
-    if false {
-        graph.retain_nodes(|g, n| {
-            trace!("{:?}", n);
-            let valve = &g[n];
-            if valve.flow_rate == 0 && g.neighbors(n).collect::<Vec<_>>().len() == 2 {
-                trace!("  {:?}", valve);
-                for edge in g.edges_directed(n, petgraph::Outgoing) {
-                    trace!("    O: {:?}", edge);
+    // adding both directions... both graphs appear to have paired to/from edges
+    let combinations: HashSet<_> = chain(&valve_locs, vec![&"AA".to_string()])
+        .combinations(2)
+        .flat_map(|e| {
+            let mut tmp = e.clone();
+            tmp.sort();
+            [
+                (tmp[0].clone(), tmp[1].clone()),
+                (tmp[1].clone(), tmp[0].clone()),
+            ]
+        })
+        .collect();
+    //debug!("combinations: {:?}", combinations);
+
+    // find all the shortest routes between combinations of valves
+    // only considering nodes with valves for routing - may not be the absolute shortest route
+    // for all inputs? But I think it works for these graphs.
+    let mut min_paths: HashMap<ValveID, Vec<(ValveID, Vec<NodeIndex>)>> = HashMap::new();
+
+    for (begin, end) in combinations {
+        // get minimum cost path from begin to end
+        let (_, path) = astar(
+            &graph,
+            nodes[&begin],
+            |finish| finish == nodes[&end],
+            |e| *e.weight(),
+            |_| 0,
+        )
+        .ok_or(eyre!("astar failed"))?;
+        trace!(
+            "{}-->{}: {:?}",
+            begin,
+            end,
+            &path
+                .iter()
+                .map(|n| graph.node_weight(*n).unwrap().id.clone())
+                .collect::<Vec<_>>()
+        );
+        trace!(
+            "{}-->{}: {:?}",
+            begin,
+            end,
+            &path
+                .iter()
+                .map(|n| graph.node_weight(*n).unwrap().flow_rate)
+                .collect::<Vec<_>>()
+        );
+
+        let cost = (end.clone(), path);
+        min_paths.entry(begin.clone()).or_default().push(cost);
+    }
+    trace!("min_paths: {:?}", min_paths);
+
+    // walk all the variations on paths possible, creating actions DAG
+    // variations: all combinations of AA to somewhere, with total action length <=30
+
+    debug!("walking...");
+    let mut paths: Graph<Action, i32, petgraph::Directed> = Graph::new();
+    let root = paths.add_node(Action::Start("AA".to_string()));
+    let mut ends: VecDeque<NodeIndex> = VecDeque::new();
+    ends.push_front(root);
+    let mut completed: VecDeque<NodeIndex> = VecDeque::new();
+
+    let mut temp_counter = 0; // TODO: end the loop by detecting path lengths
+    loop {
+        temp_counter += 1;
+        trace!("walking... loop {temp_counter}");
+        // avoid runaways
+        if temp_counter > 50_000_000 {
+            debug!("break, current ends: {ends:?}");
+            break;
+        };
+        let Some(step) = ends.pop_back() else {break};
+        trace!("at step: {:?}", &paths[step]);
+        let step_count = paths_step_count(&paths, step);
+        // part 1 limit
+        if step_count >= 30 {
+            // for add paths that hit this many steps to completed
+            completed.push_back(step);
+            continue;
+        }
+
+        let opened_valves = paths_open_valves(&paths, step);
+        trace!("opened_valves: {:?}", opened_valves);
+
+        // TODO: if all valves open, then wait
+        if let Action::Move(id) = &paths[step] {
+            // open this valve if it hasn't already been opened
+            if !opened_valves.contains(id) {
+                trace!("Open({id})");
+                assert!(graph[nodes[id]].flow_rate != 0);
+                let n = paths.add_node(Action::Open(id.to_string(), graph[nodes[id]].flow_rate));
+                paths.add_edge(n, step, 1);
+                ends.push_front(n);
+                continue;
+            } else {
+                panic!("Somehow ended up at an already opened valve: {id}")
+            }
+        }
+
+        // awkward convert to let/else?
+        match &paths[step] {
+            Action::Start(id) | Action::Open(id, _) => {
+                // find all of the possible next steps and add them to the paths graph
+                let candidates: HashSet<_> = valve_locs.difference(&opened_valves).collect();
+                trace!("candidates: {:?}", candidates);
+                if candidates.is_empty() {
+                    // duplicated in Wait arm. :/
+                    let n = paths.add_node(Action::Wait(id.to_string()));
+                    paths.add_edge(n, step, 1);
+                    ends.push_front(n);
+                    continue;
                 }
-                for edge in g.edges_directed(n, petgraph::Incoming) {
-                    trace!("    I: {:?}", edge);
-                }
-                for neighbor in g.neighbors(n) {
-                    trace!("    {:?}", g[neighbor]);
+
+                for (dest, route) in min_paths.get(id).unwrap() {
+                    if !candidates.contains(dest) {
+                        continue;
+                    }
+                    trace!("Move({dest}), {route:?}");
+                    let mut prev = step;
+                    for node in &route[1..] {
+                        let n = paths.add_node(Action::Move(graph[*node].id.to_string()));
+                        paths.add_edge(n, prev, 1);
+                        prev = n;
+                    }
+                    ends.push_front(prev);
                 }
             }
-            true
-        });
+            Action::Wait(id) => {
+                let n = paths.add_node(Action::Wait(id.to_string()));
+                paths.add_edge(n, step, 1);
+                ends.push_front(n);
+                continue;
+            }
+            Action::Move(_) => unreachable!(),
+        };
     }
+
+    // nodes remaining in ends should be the list of starts of all paths
+
+    debug!("ends: {:?}", ends.len());
+    debug!("completed: {:?}", completed.len());
+
+    let mut max_pressure: (i32, NodeIndex) = (0, root);
+    for node in completed.drain(..) {
+        let pressure = paths_total_pressure(&paths, node).0;
+        if pressure > max_pressure.0 {
+            max_pressure = (pressure, node);
+        }
+    }
+    debug!("max_pressure: {:?}", max_pressure);
+    //_paths_step_print(&paths, max_pressure.1);
+
+    //println!("{}", petgraph::dot::Dot::new(&paths));
+
+    // 3203 - too high  5:58 to run
 
     Ok(())
 }
@@ -139,29 +259,6 @@ impl Display for Action {
     }
 }
 
-#[derive(Debug, Clone)]
-struct Path {
-    actions: Vec<Action>,
-    open: HashSet<ValveID>,
-    _visited: HashSet<ValveID>,
-    //flow_rate: FlowRate,
-}
-
-impl Display for Path {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(
-            f,
-            "P:({}):{:?}",
-            self.actions
-                .iter()
-                .map(|a| format!("{}", a))
-                .collect::<Vec<_>>()
-                .join(","),
-            self.open,
-        )
-    }
-}
-
 type ValveID = String;
 type FlowRate = i32;
 
@@ -177,14 +274,44 @@ impl Display for Valve {
     }
 }
 
-fn total_pressure(graph: &Graph<Action, i32>, start: NodeIndex) -> (i32, i32, i32) {
+fn _paths_step_print(graph: &Graph<Action, i32>, start: NodeIndex) {
+    let mut count = -1;
+    let mut dfs = DfsPostOrder::new(graph, start);
+    while let Some(nx) = dfs.next(graph) {
+        count += 1;
+        println!("{:>3}: {}", count, graph[nx]);
+    }
+}
+
+fn paths_step_count(graph: &Graph<Action, i32>, start: NodeIndex) -> i32 {
+    let mut count = -1;
+    let mut dfs = DfsPostOrder::new(graph, start);
+    while dfs.next(graph).is_some() {
+        count += 1;
+    }
+    count
+}
+
+fn paths_open_valves(graph: &Graph<Action, i32>, start: NodeIndex) -> HashSet<ValveID> {
+    let mut opened = HashSet::new();
+    let mut dfs = DfsPostOrder::new(graph, start);
+    while let Some(nx) = dfs.next(graph) {
+        if let Action::Open(id, _) = &graph[nx] {
+            opened.insert(id.to_string());
+        }
+    }
+    opened.insert("AA".to_string()); // treat AA as always opened
+    opened
+}
+
+fn paths_total_pressure(graph: &Graph<Action, i32>, start: NodeIndex) -> (i32, i32, i32) {
     trace!("total_pressure");
     let mut minute = -1;
     let mut total = 0;
     let mut flow_rate = 0;
     let mut just_opened = 0;
-    let mut dfs = DfsPostOrder::new(&graph, start);
-    while let Some(nx) = dfs.next(&graph) {
+    let mut dfs = DfsPostOrder::new(graph, start);
+    while let Some(nx) = dfs.next(graph) {
         match graph[nx] {
             Action::Open(_, fr) => just_opened += fr,
             _ => {
@@ -271,6 +398,6 @@ mod tests {
         //println!("{}", petgraph::dot::Dot::new(&graph));
         //println!("{:#?}", &graph);
 
-        assert_eq!(1651, total_pressure(&graph, prev).0);
+        assert_eq!(1651, paths_total_pressure(&graph, prev).0);
     }
 }

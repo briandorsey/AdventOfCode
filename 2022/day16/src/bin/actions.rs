@@ -31,8 +31,8 @@ fn total_pressure(graph: &Graph<Action, i32>, start: NodeIndex) -> (i32, i32, i3
     let mut total = 0;
     let mut flow_rate = 0;
     let mut just_opened = 0;
-    let mut dfs = DfsPostOrder::new(&graph, start);
-    while let Some(nx) = dfs.next(&graph) {
+    let mut dfs = DfsPostOrder::new(graph, start);
+    while let Some(nx) = dfs.next(graph) {
         match graph[nx] {
             Action::Open(_, fr) => just_opened += fr,
             _ => {
@@ -52,6 +52,7 @@ fn total_pressure(graph: &Graph<Action, i32>, start: NodeIndex) -> (i32, i32, i3
 }
 
 fn main() -> Result<()> {
+    // proof of concept for calculating the total pressure relieved.
     let actions = vec![
         (1, Action::Move("DD".to_string())),
         (2, Action::Open("DD".to_string(), 20)),
