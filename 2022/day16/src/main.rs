@@ -12,6 +12,8 @@ use std::fs;
 use tracing::{debug, info, trace, Level};
 use tracing_subscriber::FmtSubscriber;
 
+// note: this works for the test input, but NOT for the full input.
+
 fn main() -> Result<()> {
     let input = env::args_os().nth(1).expect("need input file name");
     let level = match env::args().nth(2) {
