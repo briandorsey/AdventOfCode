@@ -31,10 +31,14 @@ fn main() -> Result<()> {
         .finish();
     tracing::subscriber::set_global_default(subscriber)
         .expect("setting tracing default subscriber failed");
-    info!("");
     debug!("{input:?}");
     let input = fs::read_to_string(input)?;
 
+    info!("part1: {}", part1(&input).unwrap());
+    Ok(())
+}
+
+fn part1(input: &str) -> Result<i32> {
     let mut graph: Graph<Valve, i32, petgraph::Directed> = Graph::new();
     let mut nodes: HashMap<ValveID, NodeIndex> = HashMap::new();
     let mut edges: Vec<(ValveID, ValveID)> = Vec::new();
@@ -69,7 +73,7 @@ fn main() -> Result<()> {
         //println!("  --> {valve}");
     }
     for (a, b) in edges {
-        //println!("{a:?} --> {b:?}");
+        trace!("{a:?} --> {b:?}");
         graph.add_edge(nodes[&a], nodes[&b], 1);
     }
 
@@ -240,7 +244,7 @@ fn main() -> Result<()> {
 
     // 3203 - too high  5:58 to run
 
-    Ok(())
+    Ok(max_pressure.0)
 }
 
 #[derive(Debug, Clone)]
@@ -401,5 +405,30 @@ mod tests {
         //println!("{:#?}", &graph);
 
         assert_eq!(1651, paths_total_pressure(&graph, prev).0);
+    }
+
+    #[test]
+    fn inputs() {
+        for (num, input, p1, _) in [(
+            0,
+            "Valve AA has flow rate=0; tunnels lead to valves DD, II, BB
+Valve BB has flow rate=13; tunnels lead to valves CC, AA
+Valve CC has flow rate=2; tunnels lead to valves DD, BB
+Valve DD has flow rate=20; tunnels lead to valves CC, AA, EE
+Valve EE has flow rate=3; tunnels lead to valves FF, DD
+Valve FF has flow rate=0; tunnels lead to valves EE, GG
+Valve GG has flow rate=0; tunnels lead to valves FF, HH
+Valve HH has flow rate=22; tunnel leads to valve GG
+Valve II has flow rate=0; tunnels lead to valves AA, JJ
+Valve JJ has flow rate=21; tunnel leads to valve II",
+            1651,
+            0,
+        )]
+        .iter()
+        {
+            println!("testing input num: {num}");
+            assert_eq!(*p1, part1(input).unwrap(), "Part 1 failed");
+            //assert_eq!(*p2, part2(input).unwrap(), "Part 2 failed");
+        }
     }
 }
