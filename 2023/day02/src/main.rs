@@ -1,5 +1,6 @@
 use color_eyre::eyre::Result;
 //use color_eyre::eyre::{eyre, Result};
+use std::cmp::max;
 use std::env;
 use std::fs;
 
@@ -68,6 +69,7 @@ fn main() -> Result<()> {
     };
 
     let mut possible_ids: Vec<u32> = Vec::new();
+    let mut powers: Vec<u32> = Vec::new();
 
     for game in games {
         if game
@@ -77,11 +79,21 @@ fn main() -> Result<()> {
         {
             possible_ids.push(game.id)
         }
+        // part02: calculate powers
+        let mut min_pull = Pull { r: 0, g: 0, b: 0 };
+        for pull in game.pulls {
+            min_pull.r = max(min_pull.r, pull.r);
+            min_pull.g = max(min_pull.g, pull.g);
+            min_pull.b = max(min_pull.b, pull.b);
+        }
+        powers.push(min_pull.r * min_pull.g * min_pull.b);
     }
+
     println!(
-        "{possible_ids:?} --> sum: {:?}\n",
+        "{possible_ids:?} --> sum: {:?}",
         possible_ids.iter().sum::<u32>()
     );
+    println!("{powers:?} --> sum: {:?}", powers.iter().sum::<u32>());
 
     Ok(())
 }
