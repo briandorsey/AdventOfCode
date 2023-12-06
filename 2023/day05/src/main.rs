@@ -1,6 +1,6 @@
 use anyhow::{anyhow, Result};
+use rayon::prelude::*;
 use std::cmp::min;
-use std::collections::HashSet;
 use std::env;
 use std::fs;
 use std::ops::Range;
@@ -27,7 +27,6 @@ fn main() -> Result<()> {
 
     // part02
     println!("part02:");
-    let mut seeds_from_range: HashSet<usize> = HashSet::new();
     let mut ranges: Vec<(usize, usize)> = Vec::new();
     for item in seeds.chunks_exact(2) {
         let seed = item[0].clone();
@@ -37,34 +36,19 @@ fn main() -> Result<()> {
     ranges.sort();
     println!("ranges: {:?}", ranges.len());
 
-    // combine overlapping ranges... looks like this wasn't needed for my input
-    // leaving it for posterity... for now at least.
-    let mut combined_ranges: Vec<(usize, usize)> = Vec::new();
-
-    let mut r_iter = ranges.drain(..);
-    combined_ranges.push(r_iter.next().unwrap());
-    for r in r_iter {
-        let prev = combined_ranges.pop().unwrap();
-        if prev.1 >= r.0 {
-            combined_ranges.push((prev.0, r.1));
-        } else {
-            combined_ranges.push(prev);
-            combined_ranges.push(r);
-        }
-    }
-
-    println!("combined_ranges: {:?}", combined_ranges.len());
     let mut totals: Vec<usize> = Vec::new();
-    for r in &combined_ranges {
+    for r in &ranges {
         totals.push(r.1 - r.0);
     }
     println!("totals: {:?}", totals);
     println!("total: {:?}", totals.iter().sum::<usize>());
 
-    let mut min_locations: Vec<usize> = Vec::new();
-    for r in combined_ranges {
-        min_locations.push(range_lookup_min_location(r.0..r.1, &path));
-    }
+    let ranges = chunk_ranges(ranges, 10_000_000);
+
+    let min_locations: Vec<usize> = ranges
+        .par_iter()
+        .map(|r| range_lookup_min_location(r.0..r.1, &path))
+        .collect();
 
     //println!("min_locations: {min_locations:?}");
     println!("min_locations count: {:?}", min_locations.len());
@@ -73,11 +57,36 @@ fn main() -> Result<()> {
         min_locations.iter().min().unwrap()
     );
     // part02 took 269.69s on a release build on my machine. Pretty slow, but still brute forced.
+    //  258.99s user 0.87s system 99% cpu 4:20.41 total
     // Probably need to re-work the problem by caching paths to make things quicker?
     // also, this would be a good use-case to play with Rayon for parallelization while it's
     // still slow. .
+    // rayon release, spread by range (uses less and less proc as some complete early)
+    // 609.76s user 0.95s system 515% cpu 1:58.55 total
+    // chunking the ranges in to 10_000_000 size chunks make it slower?
+    // 1249.74s user 2.25s system 944% cpu 2:12.60 total
+    // hmmm... maybe build is different than run? faster this time:
+    // 516.41s user 2.16s system 873% cpu 59.379 total
+    // huh... or maybe it just varies a lot?
+    // 1097.76s user 2.43s system 945% cpu 1:56.33 total
+    // Good enough for now
 
     Ok(())
+}
+
+fn chunk_ranges(ranges: Vec<(usize, usize)>, size: usize) -> Vec<(usize, usize)> {
+    let mut output: Vec<(usize, usize)> = Vec::new();
+    for r in ranges {
+        let total = r.1 - r.0;
+        let whole = total / size;
+        //let remainder = total % size;
+        for i in 0..whole {
+            let offset = i * size;
+            output.push((r.0 + offset, r.0 + ((i + 1) * size)));
+        }
+        output.push((r.0 + whole * size, r.1));
+    }
+    output
 }
 
 fn lookup_min_locations(seeds: &Vec<usize>, path: &Vec<CatMap>) -> Vec<usize> {
@@ -99,13 +108,8 @@ fn range_lookup_min_location(seeds: Range<usize>, path: &Vec<CatMap>) -> usize {
         "range_lookup..({seeds:?}, ...) total: {:?}",
         seeds.end - seeds.start
     );
-    let mut examined = 0;
     let mut min_location: usize = usize::MAX;
     for seed in seeds {
-        examined += 1;
-        if examined % 10_000_000 == 0 {
-            println!("progress: {examined:?}");
-        }
         let mut seed_path: Vec<usize> = vec![seed.clone()];
         for map in path {
             seed_path.push(map.map_forward(seed_path.last().unwrap().clone()))
