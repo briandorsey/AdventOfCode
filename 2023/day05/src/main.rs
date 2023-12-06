@@ -1,4 +1,6 @@
 use anyhow::{anyhow, Result};
+use std::cmp::min;
+use std::collections::HashSet;
 use std::env;
 use std::fs;
 use std::ops::Range;
@@ -8,38 +10,110 @@ fn main() -> Result<()> {
     println!("{input:?}");
     let input = fs::read_to_string(input)?;
 
-    let (seeds_string, path) = parse(input)?;
+    let (seeds, path) = parse(input)?;
     //println!("{seeds:?}\n{path:?}");
 
     // part01
     println!("part01:");
-    let seeds = seeds_string
-        .iter()
-        .filter_map(|s| s.parse::<usize>().ok())
-        .collect();
-    println!("{seeds:?}");
-    let min_locations = lookup_min_locations(seeds, path);
+    println!("seed count: {:?}", seeds.len());
+    let min_locations = lookup_min_locations(&seeds, &path);
 
-    println!("min_locations: {min_locations:?}");
+    //println!("min_locations: {min_locations:?}");
+    println!("min_locations count: {:?}", min_locations.len());
     println!(
         "part01: min_location: {:?}",
         min_locations.iter().min().unwrap()
     );
+
+    // part02
+    println!("part02:");
+    let mut seeds_from_range: HashSet<usize> = HashSet::new();
+    let mut ranges: Vec<(usize, usize)> = Vec::new();
+    for item in seeds.chunks_exact(2) {
+        let seed = item[0].clone();
+        let count = item[1].clone();
+        ranges.push((seed, seed + count));
+    }
+    ranges.sort();
+    println!("ranges: {:?}", ranges.len());
+
+    // combine overlapping ranges... looks like this wasn't needed for my input
+    // leaving it for posterity... for now at least.
+    let mut combined_ranges: Vec<(usize, usize)> = Vec::new();
+
+    let mut r_iter = ranges.drain(..);
+    combined_ranges.push(r_iter.next().unwrap());
+    for r in r_iter {
+        let prev = combined_ranges.pop().unwrap();
+        if prev.1 >= r.0 {
+            combined_ranges.push((prev.0, r.1));
+        } else {
+            combined_ranges.push(prev);
+            combined_ranges.push(r);
+        }
+    }
+
+    println!("combined_ranges: {:?}", combined_ranges.len());
+    let mut totals: Vec<usize> = Vec::new();
+    for r in &combined_ranges {
+        totals.push(r.1 - r.0);
+    }
+    println!("totals: {:?}", totals);
+    println!("total: {:?}", totals.iter().sum::<usize>());
+
+    let mut min_locations: Vec<usize> = Vec::new();
+    for r in combined_ranges {
+        min_locations.push(range_lookup_min_location(r.0..r.1, &path));
+    }
+
+    //println!("min_locations: {min_locations:?}");
+    println!("min_locations count: {:?}", min_locations.len());
+    println!(
+        "part02: min_location: {:?}",
+        min_locations.iter().min().unwrap()
+    );
+    // part02 took 269.69s on a release build on my machine. Pretty slow, but still brute forced.
+    // Probably need to re-work the problem by caching paths to make things quicker?
+    // also, this would be a good use-case to play with Rayon for parallelization while it's
+    // still slow. .
+
     Ok(())
 }
 
-fn lookup_min_locations(seeds: Vec<usize>, path: Vec<CatMap>) -> Vec<usize> {
+fn lookup_min_locations(seeds: &Vec<usize>, path: &Vec<CatMap>) -> Vec<usize> {
     let mut min_locations: Vec<usize> = Vec::new();
-    println!("paths:");
     for seed in seeds {
         let mut seed_path: Vec<usize> = vec![seed.clone()];
-        for map in &path {
+        for map in path {
             seed_path.push(map.map_forward(seed_path.last().unwrap().clone()))
         }
-        println!("{seed_path:?}");
+        //println!("{seed_path:?}");
         min_locations.push(seed_path.last().unwrap().clone());
     }
+    println!("paths count: {:?}", min_locations.len());
     min_locations
+}
+
+fn range_lookup_min_location(seeds: Range<usize>, path: &Vec<CatMap>) -> usize {
+    println!(
+        "range_lookup..({seeds:?}, ...) total: {:?}",
+        seeds.end - seeds.start
+    );
+    let mut examined = 0;
+    let mut min_location: usize = usize::MAX;
+    for seed in seeds {
+        examined += 1;
+        if examined % 10_000_000 == 0 {
+            println!("progress: {examined:?}");
+        }
+        let mut seed_path: Vec<usize> = vec![seed.clone()];
+        for map in path {
+            seed_path.push(map.map_forward(seed_path.last().unwrap().clone()))
+        }
+        //println!("{seed_path:?}");
+        min_location = min(min_location, seed_path.last().unwrap().clone());
+    }
+    min_location
 }
 
 // map categories from one to another
@@ -76,14 +150,18 @@ impl CatMap {
     }
 }
 
-fn parse(input: String) -> Result<(Vec<String>, Vec<CatMap>)> {
+fn parse(input: String) -> Result<(Vec<usize>, Vec<CatMap>)> {
     // parse seeds
     let Some((seeds, input)) = input.split_once("\n") else {
         return Err(anyhow!("parsing: no newline to split on"));
     };
     // getting lazy, just using unwrap from here onward...
     let (_, seeds) = seeds.split_once(":").unwrap();
-    let seeds: Vec<_> = seeds.trim().split(" ").map(|s| s.to_string()).collect();
+    let seeds: Vec<_> = seeds
+        .trim()
+        .split(" ")
+        .filter_map(|s| s.parse::<usize>().ok())
+        .collect();
 
     // parse the maps
     let mut path: Vec<CatMap> = Vec::new();
