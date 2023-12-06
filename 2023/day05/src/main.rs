@@ -8,12 +8,29 @@ fn main() -> Result<()> {
     println!("{input:?}");
     let input = fs::read_to_string(input)?;
 
-    let (seeds, path) = parse(input)?;
+    let (seeds_string, path) = parse(input)?;
     //println!("{seeds:?}\n{path:?}");
 
     // part01
-    println!("paths:");
+    println!("part01:");
+    let seeds = seeds_string
+        .iter()
+        .filter_map(|s| s.parse::<usize>().ok())
+        .collect();
+    println!("{seeds:?}");
+    let min_locations = lookup_min_locations(seeds, path);
+
+    println!("min_locations: {min_locations:?}");
+    println!(
+        "part01: min_location: {:?}",
+        min_locations.iter().min().unwrap()
+    );
+    Ok(())
+}
+
+fn lookup_min_locations(seeds: Vec<usize>, path: Vec<CatMap>) -> Vec<usize> {
     let mut min_locations: Vec<usize> = Vec::new();
+    println!("paths:");
     for seed in seeds {
         let mut seed_path: Vec<usize> = vec![seed.clone()];
         for map in &path {
@@ -22,13 +39,11 @@ fn main() -> Result<()> {
         println!("{seed_path:?}");
         min_locations.push(seed_path.last().unwrap().clone());
     }
-
-    println!("min_locations: {min_locations:?}");
-    println!("min_location: {:?}", min_locations.iter().min().unwrap());
-    Ok(())
+    min_locations
 }
 
 // map categories from one to another
+#[allow(dead_code)]
 #[derive(Debug)]
 struct CatMap {
     name: String,
@@ -37,6 +52,7 @@ struct CatMap {
     ranges: Vec<CatMapRange>,
 }
 
+#[allow(dead_code)]
 #[derive(Debug)]
 struct CatMapRange {
     source: Range<usize>,
@@ -60,18 +76,14 @@ impl CatMap {
     }
 }
 
-fn parse(input: String) -> Result<(Vec<usize>, Vec<CatMap>)> {
+fn parse(input: String) -> Result<(Vec<String>, Vec<CatMap>)> {
     // parse seeds
     let Some((seeds, input)) = input.split_once("\n") else {
         return Err(anyhow!("parsing: no newline to split on"));
     };
     // getting lazy, just using unwrap from here onward...
     let (_, seeds) = seeds.split_once(":").unwrap();
-    let seeds: Vec<_> = seeds
-        .trim()
-        .split(" ")
-        .filter_map(|s| s.parse::<usize>().ok())
-        .collect();
+    let seeds: Vec<_> = seeds.trim().split(" ").map(|s| s.to_string()).collect();
 
     // parse the maps
     let mut path: Vec<CatMap> = Vec::new();
