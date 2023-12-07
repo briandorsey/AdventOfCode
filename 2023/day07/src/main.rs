@@ -19,7 +19,7 @@ fn main() -> Result<()> {
             .map(|c| match c {
                 c if c.is_ascii_digit() => c.to_digit(10).expect("parse int"),
                 'T' => 10,
-                'J' => 11,
+                'J' => 0,
                 'Q' => 12,
                 'K' => 13,
                 'A' => 14,
@@ -42,7 +42,7 @@ fn main() -> Result<()> {
         winnings += winning;
     }
 
-    println!("part01: {winnings:?}");
+    println!("part02: {winnings:?}");
 
     Ok(())
 }
@@ -81,6 +81,23 @@ impl HandType {
         }
         grouped.sort_by_key(|e| e.len());
         grouped.reverse();
+
+        // promote jokers to largest group
+        // this section is a hack, cleanup someday
+        let mut jokers: Vec<char> = Vec::new();
+        let mut joker_idx: usize = usize::MAX;
+        for (idx, g) in grouped.iter_mut().enumerate() {
+            if g[0] == 'J' && g.len() != 5 {
+                jokers.extend(g.drain(..));
+                joker_idx = idx;
+                break;
+            }
+        }
+        if joker_idx != usize::MAX {
+            grouped.remove(joker_idx);
+        }
+        grouped[0].extend(jokers.drain(..));
+
         //println!("{:?}", grouped);
         if grouped[0].len() == 5 {
             assert_eq!(1, grouped.len());
@@ -108,7 +125,7 @@ impl HandType {
             // all distinct
             Ok(HandType::HighCard)
         } else {
-            unreachable!();
+            unreachable!("{s:?}, {grouped:?}");
         }
     }
 }
