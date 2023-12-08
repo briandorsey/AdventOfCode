@@ -1,4 +1,5 @@
 use anyhow::Result;
+use num::integer::lcm;
 use std::collections::HashMap;
 use std::env;
 use std::fs;
@@ -28,7 +29,7 @@ fn main() -> Result<()> {
         );
     }
     //println!("{node_map:?}");
-
+    println!("part01");
     let limit: u64 = 10_000_000_000;
     let mut counter = 0;
     let mut current: Vec<String> = node_map
@@ -61,9 +62,51 @@ fn main() -> Result<()> {
             .all(|e| e.chars().last().expect("key") == 'Z')
         {
             println!("ZZZ found after {counter:?} iterations");
+            println!("part01: {counter:?}");
             break;
         };
     }
+
+    println!("part02");
+    let limit: u64 = 10_000_000;
+    let mut counter = 0;
+    let mut current: Vec<String> = node_map
+        .keys()
+        .filter(|k| k.chars().last().expect("key") == 'A')
+        .map(|k| k.clone())
+        .collect();
+    //println!("{current:?}");
+    let mut lengths: Vec<u64> = Vec::new();
+
+    for element in current.iter_mut() {
+        for direction in path.chars().cycle() {
+            counter += 1;
+            if counter > limit {
+                println!("limit reached. {limit:?} iterations. Quitting.");
+                break;
+            }
+
+            //println!("{direction:?}");
+            let node = node_map
+                .get(element)
+                .expect("node lookup failed: {current:?}");
+            *element = match direction {
+                'L' => node.l.clone(),
+                'R' => node.r.clone(),
+                _ => unreachable!(),
+            };
+            //println!("{element:?}");
+            if element.chars().last().expect("key") == 'Z' {
+                println!("??Z found after {counter:?} iterations");
+                lengths.push(counter);
+                counter = 0;
+                break;
+            };
+        }
+    }
+    println!("{lengths:?}");
+    let l = lengths.into_iter().fold(1, |acc, b| lcm(acc, b));
+    println!("part02: {l:?}");
 
     Ok(())
 }
