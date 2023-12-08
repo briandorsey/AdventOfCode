@@ -27,28 +27,39 @@ fn main() -> Result<()> {
             },
         );
     }
-    println!("{node_map:?}");
+    //println!("{node_map:?}");
 
-    let mut limit = 100_000;
+    let limit: u64 = 10_000_000_000;
     let mut counter = 0;
-    let start = "AAA".to_string();
-    let mut current = start.clone();
+    let mut current: Vec<String> = node_map
+        .keys()
+        .filter(|k| k.chars().last().expect("key") == 'A')
+        .map(|k| k.clone())
+        .collect();
+    //println!("{current:?}");
     for direction in path.chars().cycle() {
         counter += 1;
         if counter > limit {
             println!("limit reached. {limit:?} iterations. Quitting.");
             break;
         }
-        //println!("{direction:?}");
-        let node = node_map
-            .get(&current)
-            .expect("node lookup failed: {current:?}");
-        current = match direction {
-            'L' => node.l.clone(),
-            'R' => node.r.clone(),
-            _ => unreachable!(),
-        };
-        if current == "ZZZ".to_string() {
+
+        for element in current.iter_mut() {
+            //println!("{direction:?}");
+            let node = node_map
+                .get(element)
+                .expect("node lookup failed: {current:?}");
+            *element = match direction {
+                'L' => node.l.clone(),
+                'R' => node.r.clone(),
+                _ => unreachable!(),
+            };
+        }
+        //println!("{current:?}");
+        if current
+            .iter()
+            .all(|e| e.chars().last().expect("key") == 'Z')
+        {
             println!("ZZZ found after {counter:?} iterations");
             break;
         };
